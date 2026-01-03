@@ -13,20 +13,55 @@ if (!process.env.DATABASE_URL) {
 } else {
   // Log connection info (masked) for debugging
   const maskedUrl = process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@');
-  console.log('📦 DATABASE_URL configured:', maskedUrl.substring(0, 60) + '...');
+  console.log('📦 DATABASE_URL configured:', maskedUrl.substring(0, 80) + '...');
+  
+  // Check if password placeholder is still in the connection string
+  if (process.env.DATABASE_URL.includes('[YOUR-PASSWORD]')) {
+    console.error('❌ ERROR: DATABASE_URL still contains [YOUR-PASSWORD] placeholder!');
+    console.error('Please replace [YOUR-PASSWORD] with your actual Supabase database password in Vercel environment variables.');
+  }
+  
+  // Extract hostname for validation
+  try {
+    const url = new URL(process.env.DATABASE_URL);
+    console.log('🔗 Database host:', url.hostname);
+  } catch (e) {
+    console.error('❌ Invalid DATABASE_URL format:', e.message);
+  }
 }
 
 // Supabase requires SSL connections, so we enable SSL for production
 // For local development, SSL is optional
+let connectionString = process.env.DATABASE_URL;
+
+// If connection string contains [YOUR-PASSWORD], it's invalid
+if (connectionString && connectionString.includes('[YOUR-PASSWORD]')) {
+  console.error('❌ DATABASE_URL contains placeholder - connection will fail!');
+}
+
+// Ensure connection string has proper SSL parameters for Supabase
+if (connectionString && connectionString.includes('supabase')) {
+  // Add sslmode=require if not present
+  if (!connectionString.includes('sslmode=')) {
+    const separator = connectionString.includes('?') ? '&' : '?';
+    connectionString = connectionString + separator + 'sslmode=require';
+    console.log('📝 Added sslmode=require to connection string');
+  }
+}
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  // Supabase requires SSL, so enable it for production or if DATABASE_URL contains supabase
+  connectionString: connectionString,
+  // Supabase requires SSL connections
   ssl: process.env.NODE_ENV === 'production' || process.env.DATABASE_URL?.includes('supabase') 
     ? { rejectUnauthorized: false } 
     : false,
-  // Add connection timeout for serverless
-  connectionTimeoutMillis: 10000,
-  idleTimeoutMillis: 30000
+  // Add connection timeout for serverless (increased for DNS resolution)
+  connectionTimeoutMillis: 20000,
+  idleTimeoutMillis: 30000,
+  // Retry connection on failure
+  max: 2, // Limit connections for serverless
+  // Allow longer time for DNS resolution
+  keepAlive: true
 });
 
 pool.on('connect', () => {

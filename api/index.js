@@ -28,6 +28,21 @@ try {
     // Mask password in DATABASE_URL for security (show only host)
     const maskedDbUrl = dbUrl ? dbUrl.replace(/:[^:@]+@/, ':****@') : 'not set';
     
+    // Extract hostname for debugging
+    let hostname = 'unknown';
+    let port = 'unknown';
+    let pathname = 'unknown';
+    try {
+      if (dbUrl) {
+        const url = new URL(dbUrl);
+        hostname = url.hostname;
+        port = url.port || '5432';
+        pathname = url.pathname;
+      }
+    } catch (e) {
+      hostname = 'invalid-url';
+    }
+    
     res.json({ 
       status: 'ok', 
       message: 'Server is running',
@@ -35,10 +50,38 @@ try {
         hasDatabaseUrl: !!process.env.DATABASE_URL,
         hasJwtSecret: !!process.env.JWT_SECRET,
         vercel: !!process.env.VERCEL,
-        databaseUrlPreview: maskedDbUrl.substring(0, 50) + (maskedDbUrl.length > 50 ? '...' : ''),
+        databaseUrlPreview: maskedDbUrl.substring(0, 80) + (maskedDbUrl.length > 80 ? '...' : ''),
+        databaseHostname: hostname,
+        databasePort: port,
+        databasePath: pathname,
         nodeEnv: process.env.NODE_ENV
       }
     });
+  });
+
+  // Database connection test endpoint
+  app.get('/api/test-db', async (req, res) => {
+    try {
+      const pool = require('../backend/config/database');
+      // Try a simple query
+      const result = await pool.query('SELECT NOW() as current_time, version() as pg_version');
+      res.json({ 
+        status: 'success', 
+        message: 'Database connection successful',
+        data: result.rows[0]
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        status: 'error',
+        message: 'Database connection failed',
+        error: error.message,
+        code: error.code,
+        errno: error.errno,
+        syscall: error.syscall,
+        hostname: error.hostname,
+        details: process.env.NODE_ENV === 'development' || process.env.VERCEL ? error.stack : undefined
+      });
+    }
   });
 
   // Routes - load with error handling
