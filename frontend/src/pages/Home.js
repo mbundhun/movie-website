@@ -7,6 +7,9 @@ const Home = () => {
   const [recentReviews, setRecentReviews] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  // Ensure recentReviews is always an array (defensive programming)
+  const safeRecentReviews = Array.isArray(recentReviews) ? recentReviews : [];
 
   useEffect(() => {
     fetchData();
@@ -60,9 +63,9 @@ const Home = () => {
 
       <section className="recent-reviews">
         <h2>Recent Reviews</h2>
-        {recentReviews && recentReviews.length > 0 ? (
+        {safeRecentReviews.length > 0 ? (
           <div className="reviews-grid">
-            {recentReviews.map((review) => (
+            {safeRecentReviews.map((review) => (
               <div key={review.id} className="review-card">
                 <h3>
                   <Link to={`/reviews?movie_id=${review.movie_id}`}>
