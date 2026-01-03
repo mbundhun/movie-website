@@ -1,40 +1,80 @@
 // Vercel serverless function - exports Express app
-const express = require('express');
-const cors = require('cors');
-const dotenv = require('dotenv');
+// Wrap in try-catch to handle initialization errors gracefully
 
-// Load environment variables
-dotenv.config();
+let app;
 
-const app = express();
+try {
+  const express = require('express');
+  const cors = require('cors');
+  const dotenv = require('dotenv');
 
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+  // Load environment variables
+  dotenv.config();
 
-// Routes - use relative paths from backend folder
-app.use('/api/auth', require('../backend/routes/auth'));
-app.use('/api/movies', require('../backend/routes/movies'));
-app.use('/api/reviews', require('../backend/routes/reviews'));
-app.use('/api/watchlist', require('../backend/routes/watchlist'));
-app.use('/api/stats', require('../backend/routes/stats'));
-app.use('/api/cast', require('../backend/routes/cast'));
-app.use('/api/screenwriters', require('../backend/routes/screenwriters'));
+  app = express();
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Server is running' });
-});
+  // Middleware
+  app.use(cors());
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Error:', err.stack);
-  res.status(err.status || 500).json({
-    message: err.message || 'Internal server error',
-    error: process.env.NODE_ENV === 'development' ? err.stack : {}
+  // Health check - register early so it always works
+  app.get('/api/health', (req, res) => {
+    res.json({ 
+      status: 'ok', 
+      message: 'Server is running',
+      env: {
+        hasDatabaseUrl: !!process.env.DATABASE_URL,
+        hasJwtSecret: !!process.env.JWT_SECRET
+      }
+    });
   });
-});
+
+  // Routes - load with error handling
+  try {
+    app.use('/api/auth', require('../backend/routes/auth'));
+    app.use('/api/movies', require('../backend/routes/movies'));
+    app.use('/api/reviews', require('../backend/routes/reviews'));
+    app.use('/api/watchlist', require('../backend/routes/watchlist'));
+    app.use('/api/stats', require('../backend/routes/stats'));
+    app.use('/api/cast', require('../backend/routes/cast'));
+    app.use('/api/screenwriters', require('../backend/routes/screenwriters'));
+  } catch (routeError) {
+    console.error('Error loading routes:', routeError);
+    // Add error route
+    app.use('/api/*', (req, res, next) => {
+      if (req.path === '/api/health') {
+        return next(); // Let health check through
+      }
+      res.status(500).json({ 
+        error: 'Route loading failed',
+        message: routeError.message
+      });
+    });
+  }
+
+  // Error handling middleware
+  app.use((err, req, res, next) => {
+    console.error('Request error:', err.stack);
+    res.status(err.status || 500).json({
+      message: err.message || 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+  });
+
+} catch (initError) {
+  // If Express app fails to initialize, create minimal error handler
+  console.error('Failed to initialize Express app:', initError);
+  const express = require('express');
+  app = express();
+  app.use((req, res) => {
+    res.status(500).json({
+      error: 'Server initialization failed',
+      message: initError.message,
+      stack: process.env.NODE_ENV === 'development' ? initError.stack : undefined
+    });
+  });
+}
 
 // Export the Express app for Vercel
 module.exports = app;

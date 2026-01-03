@@ -17,7 +17,10 @@ pool.on('connect', () => {
 
 pool.on('error', (err) => {
   console.error('Unexpected error on idle client', err);
-  process.exit(-1);
+  // Don't exit in serverless environment - just log the error
+  if (process.env.VERCEL !== '1') {
+    process.exit(-1);
+  }
 });
 
 module.exports = pool;
