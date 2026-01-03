@@ -1,15 +1,19 @@
 // Vercel serverless function - exports Express app
-// Wrap in try-catch to handle initialization errors gracefully
+// Fix: Load environment variables from process.env (Vercel injects them automatically)
+// Fix: Ensure module resolution works by requiring from api context
 
 let app;
 
 try {
   const express = require('express');
   const cors = require('cors');
-  const dotenv = require('dotenv');
-
-  // Load environment variables
-  dotenv.config();
+  
+  // In Vercel, environment variables are automatically available in process.env
+  // dotenv.config() is not needed, but won't hurt if .env file exists
+  // Only use dotenv if we're not in Vercel
+  if (!process.env.VERCEL) {
+    require('dotenv').config();
+  }
 
   app = express();
 
@@ -25,13 +29,22 @@ try {
       message: 'Server is running',
       env: {
         hasDatabaseUrl: !!process.env.DATABASE_URL,
-        hasJwtSecret: !!process.env.JWT_SECRET
+        hasJwtSecret: !!process.env.JWT_SECRET,
+        vercel: !!process.env.VERCEL
       }
     });
   });
 
   // Routes - load with error handling
+  // Note: In Vercel, all files are available, but module resolution
+  // might need dependencies to be in api/node_modules
   try {
+    // Pre-require express in the routes context by ensuring it's available globally
+    // This helps with module resolution when routes require express
+    if (!global.express) {
+      global.express = express;
+    }
+    
     app.use('/api/auth', require('../backend/routes/auth'));
     app.use('/api/movies', require('../backend/routes/movies'));
     app.use('/api/reviews', require('../backend/routes/reviews'));
@@ -41,6 +54,7 @@ try {
     app.use('/api/screenwriters', require('../backend/routes/screenwriters'));
   } catch (routeError) {
     console.error('Error loading routes:', routeError);
+    console.error('Route error stack:', routeError.stack);
     // Add error route
     app.use('/api/*', (req, res, next) => {
       if (req.path === '/api/health') {
@@ -48,7 +62,8 @@ try {
       }
       res.status(500).json({ 
         error: 'Route loading failed',
-        message: routeError.message
+        message: routeError.message,
+        details: process.env.NODE_ENV === 'development' ? routeError.stack : undefined
       });
     });
   }
