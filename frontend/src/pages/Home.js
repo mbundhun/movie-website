@@ -7,9 +7,6 @@ const Home = () => {
   const [recentReviews, setRecentReviews] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  
-  // Ensure recentReviews is always an array (defensive programming)
-  const safeRecentReviews = Array.isArray(recentReviews) ? recentReviews : [];
 
   useEffect(() => {
     fetchData();
@@ -23,11 +20,14 @@ const Home = () => {
       ]);
       
       // Ensure we always set an array, even if API response is malformed
-      setRecentReviews(reviewsRes.data?.reviews || reviewsRes.data?.movies || []);
+      const reviewsData = reviewsRes.data?.reviews || reviewsRes.data?.movies || reviewsRes.data || [];
+      // Force it to be an array - convert if needed
+      const reviewsArray = Array.isArray(reviewsData) ? reviewsData : [];
+      setRecentReviews(reviewsArray);
       setStats(statsRes.data || null);
     } catch (error) {
       console.error('Error fetching data:', error);
-      // Ensure state remains valid even on error
+      // Ensure state remains valid even on error - always set to empty array
       setRecentReviews([]);
       setStats(null);
     } finally {
@@ -63,9 +63,9 @@ const Home = () => {
 
       <section className="recent-reviews">
         <h2>Recent Reviews</h2>
-        {safeRecentReviews.length > 0 ? (
+        {Array.isArray(recentReviews) && recentReviews.length > 0 ? (
           <div className="reviews-grid">
-            {safeRecentReviews.map((review) => (
+            {recentReviews.map((review) => (
               <div key={review.id} className="review-card">
                 <h3>
                   <Link to={`/reviews?movie_id=${review.movie_id}`}>
