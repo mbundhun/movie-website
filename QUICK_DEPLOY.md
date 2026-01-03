@@ -27,7 +27,7 @@ Fastest way to get your website hosted and working using only free services that
 6. **Environment Variables** (click "Environment Variables"):
    ```
    DATABASE_URL = postgresql://postgres:966NnnlAdJ16ouU3@db.ghxendkjzbohydqmplkd.supabase.co:5432/postgres
-   JWT_SECRET = [generate with: openssl rand -hex 32 or use online generator]
+   JWT_SECRET = 5d4dcd936e6086102e247e3239e32a90
    NODE_ENV = production
    ```
    
