@@ -19,10 +19,14 @@ const Home = () => {
         api.get('/stats')
       ]);
       
-      setRecentReviews(reviewsRes.data.reviews);
-      setStats(statsRes.data);
+      // Ensure we always set an array, even if API response is malformed
+      setRecentReviews(reviewsRes.data?.reviews || reviewsRes.data?.movies || []);
+      setStats(statsRes.data || null);
     } catch (error) {
       console.error('Error fetching data:', error);
+      // Ensure state remains valid even on error
+      setRecentReviews([]);
+      setStats(null);
     } finally {
       setLoading(false);
     }
@@ -56,7 +60,7 @@ const Home = () => {
 
       <section className="recent-reviews">
         <h2>Recent Reviews</h2>
-        {recentReviews.length > 0 ? (
+        {recentReviews && recentReviews.length > 0 ? (
           <div className="reviews-grid">
             {recentReviews.map((review) => (
               <div key={review.id} className="review-card">
