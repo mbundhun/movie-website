@@ -39,30 +39,49 @@ if (connectionString && connectionString.includes('[YOUR-PASSWORD]')) {
   console.error('❌ DATABASE_URL contains placeholder - connection will fail!');
 }
 
-// Ensure connection string has proper SSL parameters for Supabase
+// For Supabase pooler connections, we'll handle SSL via Pool config, not connection string
+// Remove any sslmode parameters from connection string to avoid conflicts
 if (connectionString && connectionString.includes('supabase')) {
-  // Add sslmode=require if not present
-  if (!connectionString.includes('sslmode=')) {
-    const separator = connectionString.includes('?') ? '&' : '?';
-    connectionString = connectionString + separator + 'sslmode=require';
-    console.log('📝 Added sslmode=require to connection string');
-  }
+  connectionString = connectionString.replace(/[?&]sslmode=[^&]*/g, '');
+  console.log('📝 Removed sslmode from connection string (using Pool SSL config instead)');
 }
 
-const pool = new Pool({
+// Determine SSL configuration
+// For Supabase (including pooler), always use SSL with rejectUnauthorized: false
+// This handles self-signed certificates in the chain
+const isSupabase = connectionString && connectionString.includes('supabase');
+const sslConfig = (process.env.NODE_ENV === 'production' || isSupabase) 
+  ? { 
+      rejectUnauthorized: false // Required for Supabase pooler connections with self-signed certs
+    } 
+  : false;
+
+if (isSupabase && sslConfig) {
+  console.log('🔒 SSL configured for Supabase (rejectUnauthorized: false)');
+}
+
+// Create pool with explicit SSL configuration
+// For Supabase pooler, we MUST set rejectUnauthorized: false to handle self-signed certs
+const poolConfig = {
   connectionString: connectionString,
-  // Supabase requires SSL connections
-  ssl: process.env.NODE_ENV === 'production' || process.env.DATABASE_URL?.includes('supabase') 
-    ? { rejectUnauthorized: false } 
-    : false,
-  // Add connection timeout for serverless (increased for DNS resolution)
+  // Add connection timeout for serverless
   connectionTimeoutMillis: 20000,
   idleTimeoutMillis: 30000,
   // Retry connection on failure
   max: 2, // Limit connections for serverless
   // Allow longer time for DNS resolution
   keepAlive: true
-});
+};
+
+// Explicitly set SSL config - this is critical for Supabase pooler
+if (sslConfig) {
+  poolConfig.ssl = sslConfig;
+  console.log('🔒 Pool SSL config set:', JSON.stringify(sslConfig));
+} else {
+  poolConfig.ssl = false;
+}
+
+const pool = new Pool(poolConfig);
 
 pool.on('connect', () => {
   console.log('Connected to PostgreSQL database');
