@@ -9,6 +9,11 @@ if (!process.env.VERCEL) {
 // Check if DATABASE_URL is set
 if (!process.env.DATABASE_URL) {
   console.error('⚠️  DATABASE_URL is not set!');
+  console.error('Available env vars:', Object.keys(process.env).filter(k => k.includes('DATABASE') || k.includes('DB')));
+} else {
+  // Log connection info (masked) for debugging
+  const maskedUrl = process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@');
+  console.log('📦 DATABASE_URL configured:', maskedUrl.substring(0, 60) + '...');
 }
 
 // Supabase requires SSL connections, so we enable SSL for production
@@ -18,7 +23,10 @@ const pool = new Pool({
   // Supabase requires SSL, so enable it for production or if DATABASE_URL contains supabase
   ssl: process.env.NODE_ENV === 'production' || process.env.DATABASE_URL?.includes('supabase') 
     ? { rejectUnauthorized: false } 
-    : false
+    : false,
+  // Add connection timeout for serverless
+  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: 30000
 });
 
 pool.on('connect', () => {

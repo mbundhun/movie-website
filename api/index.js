@@ -24,13 +24,19 @@ try {
 
   // Health check - register early so it always works
   app.get('/api/health', (req, res) => {
+    const dbUrl = process.env.DATABASE_URL || '';
+    // Mask password in DATABASE_URL for security (show only host)
+    const maskedDbUrl = dbUrl ? dbUrl.replace(/:[^:@]+@/, ':****@') : 'not set';
+    
     res.json({ 
       status: 'ok', 
       message: 'Server is running',
       env: {
         hasDatabaseUrl: !!process.env.DATABASE_URL,
         hasJwtSecret: !!process.env.JWT_SECRET,
-        vercel: !!process.env.VERCEL
+        vercel: !!process.env.VERCEL,
+        databaseUrlPreview: maskedDbUrl.substring(0, 50) + (maskedDbUrl.length > 50 ? '...' : ''),
+        nodeEnv: process.env.NODE_ENV
       }
     });
   });
