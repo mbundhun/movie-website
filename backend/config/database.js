@@ -1,5 +1,15 @@
 const { Pool } = require('pg');
-require('dotenv').config();
+
+// In Vercel, environment variables are automatically available
+// Only use dotenv if not in Vercel
+if (!process.env.VERCEL) {
+  require('dotenv').config();
+}
+
+// Check if DATABASE_URL is set
+if (!process.env.DATABASE_URL) {
+  console.error('⚠️  DATABASE_URL is not set!');
+}
 
 // Supabase requires SSL connections, so we enable SSL for production
 // For local development, SSL is optional

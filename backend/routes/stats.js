@@ -106,7 +106,11 @@ router.get('/', optionalAuth, async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching statistics:', error);
-    res.status(500).json({ message: 'Error fetching statistics' });
+    res.status(500).json({ 
+      message: 'Error fetching statistics',
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' || process.env.VERCEL ? error.stack : undefined
+    });
   }
 });
 
