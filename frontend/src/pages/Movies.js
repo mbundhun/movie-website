@@ -293,7 +293,12 @@ const Movies = () => {
           movies.map((movie) => (
             <div key={movie.id} className="movie-card">
               {movie.poster_url && (
-                <img src={movie.poster_url} alt={movie.title} className="movie-poster" />
+                <img 
+                  src={movie.poster_url} 
+                  alt={movie.title} 
+                  className="movie-poster"
+                  loading="lazy"
+                />
               )}
               <div className="movie-info">
                 <h3>

@@ -143,7 +143,12 @@ const MovieDetail = () => {
       <div className="movie-header">
         <div className="movie-poster-section">
           {movie.poster_url ? (
-            <img src={movie.poster_url} alt={movie.title} className="movie-poster-large" />
+            <img 
+              src={movie.poster_url} 
+              alt={movie.title} 
+              className="movie-poster-large"
+              loading="eager"
+            />
           ) : (
             <div className="poster-placeholder">No Poster</div>
           )}
@@ -210,7 +215,12 @@ const MovieDetail = () => {
             {displayedCast.map((castMember, index) => (
               <div key={index} className="cast-member">
                 {castMember.profile_image_url && (
-                  <img src={castMember.profile_image_url} alt={castMember.name} className="cast-photo" />
+                  <img 
+                    src={castMember.profile_image_url} 
+                    alt={castMember.name} 
+                    className="cast-photo"
+                    loading="lazy"
+                  />
                 )}
                 <div className="cast-info">
                   <h4>{castMember.name}</h4>

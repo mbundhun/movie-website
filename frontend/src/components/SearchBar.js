@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import useDebounce from '../hooks/useDebounce';
 import './SearchBar.css';
 
 const SearchBar = ({ onSearch, placeholder = "Search movies..." }) => {
@@ -22,16 +23,18 @@ const SearchBar = ({ onSearch, placeholder = "Search movies..." }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
   useEffect(() => {
     const fetchSuggestions = async () => {
-      if (searchTerm.trim().length < 2) {
+      if (debouncedSearchTerm.trim().length < 2) {
         setSuggestions([]);
         return;
       }
 
       setLoading(true);
       try {
-        const response = await api.get(`/movies?search=${encodeURIComponent(searchTerm)}&limit=5`);
+        const response = await api.get(`/movies?search=${encodeURIComponent(debouncedSearchTerm)}&limit=5`);
         setSuggestions(response.data.movies || []);
       } catch (error) {
         console.error('Error fetching suggestions:', error);
@@ -41,9 +44,8 @@ const SearchBar = ({ onSearch, placeholder = "Search movies..." }) => {
       }
     };
 
-    const debounceTimer = setTimeout(fetchSuggestions, 300);
-    return () => clearTimeout(debounceTimer);
-  }, [searchTerm]);
+    fetchSuggestions();
+  }, [debouncedSearchTerm]);
 
   const handleInputChange = (e) => {
     setSearchTerm(e.target.value);

@@ -1,16 +1,19 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Header from './components/Header';
-import Home from './pages/Home';
-import Reviews from './pages/Reviews';
-import Watchlist from './pages/Watchlist';
-import Stats from './pages/Stats';
-import Movies from './pages/Movies';
-import MovieDetail from './pages/MovieDetail';
-import Login from './pages/Login';
-import Register from './pages/Register';
+import { MovieListSkeleton } from './components/Skeleton';
 import './App.css';
+
+// Lazy load pages for code splitting
+const Home = lazy(() => import('./pages/Home'));
+const Reviews = lazy(() => import('./pages/Reviews'));
+const Watchlist = lazy(() => import('./pages/Watchlist'));
+const Stats = lazy(() => import('./pages/Stats'));
+const Movies = lazy(() => import('./pages/Movies'));
+const MovieDetail = lazy(() => import('./pages/MovieDetail'));
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
 
 function App() {
   return (
@@ -19,16 +22,18 @@ function App() {
         <div className="App">
           <Header />
           <main className="main-content">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/movies" element={<Movies />} />
-              <Route path="/movies/:id" element={<MovieDetail />} />
-              <Route path="/reviews" element={<Reviews />} />
-              <Route path="/watchlist" element={<Watchlist />} />
-              <Route path="/stats" element={<Stats />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-            </Routes>
+            <Suspense fallback={<MovieListSkeleton count={6} />}>
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/movies" element={<Movies />} />
+                <Route path="/movies/:id" element={<MovieDetail />} />
+                <Route path="/reviews" element={<Reviews />} />
+                <Route path="/watchlist" element={<Watchlist />} />
+                <Route path="/stats" element={<Stats />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+              </Routes>
+            </Suspense>
           </main>
         </div>
       </Router>
