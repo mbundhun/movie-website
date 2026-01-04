@@ -262,7 +262,12 @@ const MovieDetail = () => {
             {relatedMovies.map((relatedMovie) => (
               <Link key={relatedMovie.id} to={`/movies/${relatedMovie.id}`} className="related-movie-card">
                 {relatedMovie.poster_url && (
-                  <img src={relatedMovie.poster_url} alt={relatedMovie.title} className="related-movie-poster" />
+                  <img 
+                    src={relatedMovie.poster_url} 
+                    alt={relatedMovie.title} 
+                    className="related-movie-poster"
+                    loading="lazy"
+                  />
                 )}
                 <div className="related-movie-info">
                   <h4>{relatedMovie.title}</h4>
