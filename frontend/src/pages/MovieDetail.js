@@ -34,16 +34,61 @@ const MovieDetail = () => {
   const fetchReviews = useCallback(async () => {
     try {
       const response = await api.get(`/reviews?movie_id=${id}`);
-      setReviews(response.data.reviews || []);
+      const reviewsData = response.data.reviews || [];
+      setReviews(reviewsData);
+      
+      // Check if current user has watched this movie
+      if (authenticated && user) {
+        const userReview = reviewsData.find(r => r.user_id === user.id);
+        setIsWatched(userReview && userReview.watched_date ? true : false);
+      } else {
+        setIsWatched(false);
+      }
     } catch (error) {
       console.error('Error fetching reviews:', error);
     }
-  }, [id]);
+  }, [id, authenticated, user]);
+  
+  const fetchFavoriteStatus = useCallback(async () => {
+    if (!authenticated) {
+      setIsFavorite(false);
+      return;
+    }
+    
+    try {
+      const response = await api.get(`/favorites/check/${id}`);
+      setIsFavorite(response.data.isFavorite);
+    } catch (error) {
+      console.error('Error checking favorite status:', error);
+      setIsFavorite(false);
+    }
+  }, [id, authenticated]);
 
   useEffect(() => {
     fetchMovieDetails();
     fetchReviews();
-  }, [fetchMovieDetails, fetchReviews]);
+    fetchFavoriteStatus();
+  }, [fetchMovieDetails, fetchReviews, fetchFavoriteStatus]);
+  
+  const handleToggleFavorite = async () => {
+    if (!authenticated) {
+      navigate('/login');
+      return;
+    }
+    
+    try {
+      if (isFavorite) {
+        await api.delete(`/favorites/${id}`);
+        setIsFavorite(false);
+      } else {
+        await api.post('/favorites', { movie_id: id });
+        setIsFavorite(true);
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      alert(error.response?.data?.message || 'Failed to update favorite status');
+    }
+  };
 
   const fetchRelatedMovies = useCallback(async () => {
     if (!movie) return;
@@ -121,6 +166,13 @@ const MovieDetail = () => {
         rating: 5, // Default neutral rating
         watched_date: today
       });
+      
+      // Remove from watchlist (handled by backend, but we can also do it here as backup)
+      try {
+        await api.delete(`/watchlist/movie/${id}`);
+      } catch (watchlistError) {
+        // Ignore if not in watchlist or error
+      }
       
       alert('Movie marked as watched!');
       fetchReviews();
@@ -206,7 +258,20 @@ const MovieDetail = () => {
         </div>
 
         <div className="movie-info-section">
-          <h1>{movie.title} {movie.year && `(${movie.year})`}</h1>
+          <h1 className="movie-title-with-icons">
+            {isWatched && <span className="watched-icon" title="Watched">✓</span>}
+            {movie.title} {movie.year && `(${movie.year})`}
+            {authenticated && (
+              <button
+                className={`favorite-btn ${isFavorite ? 'favorited' : ''}`}
+                onClick={handleToggleFavorite}
+                title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+              >
+                {isFavorite ? '❤️' : '🤍'}
+              </button>
+            )}
+          </h1>
           
           {movie.director && (
             <p className="director-info">

@@ -138,6 +138,12 @@ router.post('/', requireAuth, async (req, res) => {
         tags && Array.isArray(tags) ? tags : null
       ]
     );
+
+    // Remove from watchlist when marked as watched
+    await pool.query(
+      'DELETE FROM watchlist WHERE movie_id = $1 AND user_id = $2',
+      [movie_id, req.user.id]
+    );
     
     // Get full review with movie and user info
     const fullReview = await pool.query(

@@ -22,6 +22,7 @@ app.use('/api/stats', require('./routes/stats'));
 app.use('/api/cast', require('./routes/cast'));
 app.use('/api/screenwriters', require('./routes/screenwriters'));
 app.use('/api/genres', require('./routes/genres'));
+app.use('/api/favorites', require('./routes/favorites'));
 app.use('/api/admin', require('./routes/admin'));
 
 // Health check

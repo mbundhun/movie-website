@@ -82,6 +82,65 @@ const Movies = () => {
   useEffect(() => {
     fetchMovies();
   }, [fetchMovies]);
+  
+  useEffect(() => {
+    if (authenticated && movies.length > 0) {
+      fetchWatchedAndFavoriteStatus();
+    }
+  }, [authenticated, movies]);
+  
+  const fetchWatchedAndFavoriteStatus = async () => {
+    if (!authenticated || !user) return;
+    
+    try {
+      // Fetch all reviews for current user to check watched status
+      const reviewsResponse = await api.get(`/reviews?user_id=${user.id}`);
+      const watchedSet = new Set();
+      reviewsResponse.data.reviews?.forEach(review => {
+        if (review.watched_date) {
+          watchedSet.add(review.movie_id);
+        }
+      });
+      setWatchedMovies(watchedSet);
+      
+      // Fetch favorites
+      const favoritesResponse = await api.get('/favorites');
+      const favoriteSet = new Set(
+        favoritesResponse.data.favorites?.map(f => f.movie_id) || []
+      );
+      setFavoriteMovies(favoriteSet);
+    } catch (error) {
+      console.error('Error fetching watched/favorite status:', error);
+    }
+  };
+  
+  const handleToggleFavorite = async (movieId, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!authenticated) {
+      navigate('/login');
+      return;
+    }
+    
+    try {
+      const isCurrentlyFavorite = favoriteMovies.has(movieId);
+      if (isCurrentlyFavorite) {
+        await api.delete(`/favorites/${movieId}`);
+        setFavoriteMovies(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(movieId);
+          return newSet;
+        });
+      } else {
+        await api.post('/favorites', { movie_id: movieId });
+        setFavoriteMovies(prev => new Set(prev).add(movieId));
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      alert(error.response?.data?.message || 'Failed to update favorite status');
+    }
+  };
 
   const handleAddMovie = async (e) => {
     e.preventDefault();
@@ -301,8 +360,21 @@ const Movies = () => {
                 />
               )}
               <div className="movie-info">
-                <h3>
+                <h3 className="movie-title-with-icons">
+                  {watchedMovies.has(movie.id) && (
+                    <span className="watched-icon" title="Watched">✓</span>
+                  )}
                   <Link to={`/movies/${movie.id}`}>{movie.title}</Link>
+                  {authenticated && (
+                    <button
+                      className={`favorite-btn ${favoriteMovies.has(movie.id) ? 'favorited' : ''}`}
+                      onClick={(e) => handleToggleFavorite(movie.id, e)}
+                      title={favoriteMovies.has(movie.id) ? 'Remove from favorites' : 'Add to favorites'}
+                      aria-label={favoriteMovies.has(movie.id) ? 'Remove from favorites' : 'Add to favorites'}
+                    >
+                      {favoriteMovies.has(movie.id) ? '❤️' : '🤍'}
+                    </button>
+                  )}
                 </h3>
                 {movie.year && <p className="year">{movie.year}</p>}
                 {movie.director && <p className="director">Director: {movie.director}</p>}

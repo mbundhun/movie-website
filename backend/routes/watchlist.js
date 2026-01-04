@@ -142,7 +142,7 @@ router.put('/:id', requireAuth, async (req, res) => {
   }
 });
 
-// Remove from watchlist (authenticated only)
+// Remove from watchlist by item ID (authenticated only)
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
@@ -162,6 +162,27 @@ router.delete('/:id', requireAuth, async (req, res) => {
     }
     
     await pool.query('DELETE FROM watchlist WHERE id = $1', [id]);
+    
+    res.json({ message: 'Removed from watchlist successfully' });
+  } catch (error) {
+    console.error('Error removing from watchlist:', error);
+    res.status(500).json({ message: 'Error removing from watchlist' });
+  }
+});
+
+// Remove from watchlist by movie ID (authenticated only)
+router.delete('/movie/:movieId', requireAuth, async (req, res) => {
+  try {
+    const { movieId } = req.params;
+    
+    const result = await pool.query(
+      'DELETE FROM watchlist WHERE movie_id = $1 AND user_id = $2 RETURNING *',
+      [movieId, req.user.id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Movie not found in watchlist' });
+    }
     
     res.json({ message: 'Removed from watchlist successfully' });
   } catch (error) {
