@@ -15,16 +15,20 @@ router.get('/', optionalAuth, async (req, res) => {
     const reviewsCount = await pool.query('SELECT COUNT(*) as count FROM reviews');
     const totalReviews = parseInt(reviewsCount.rows[0].count);
     
-    // Average rating
-    const avgRating = await pool.query('SELECT AVG(rating) as avg FROM reviews WHERE rating IS NOT NULL');
+    // Average rating (using average of three ratings)
+    const avgRating = await pool.query(
+      `SELECT AVG((performance_rating + directing_rating + screenplay_rating) / 3.0) as avg 
+       FROM reviews 
+       WHERE performance_rating IS NOT NULL AND directing_rating IS NOT NULL AND screenplay_rating IS NOT NULL`
+    );
     const averageRating = parseFloat(avgRating.rows[0].avg || 0).toFixed(2);
     
-    // Ratings distribution
+    // Ratings distribution (using average of three ratings)
     const ratingsDist = await pool.query(
-      `SELECT rating, COUNT(*) as count 
+      `SELECT ROUND((performance_rating + directing_rating + screenplay_rating) / 3.0) as rating, COUNT(*) as count 
        FROM reviews 
-       WHERE rating IS NOT NULL 
-       GROUP BY rating 
+       WHERE performance_rating IS NOT NULL AND directing_rating IS NOT NULL AND screenplay_rating IS NOT NULL
+       GROUP BY ROUND((performance_rating + directing_rating + screenplay_rating) / 3.0)
        ORDER BY rating`
     );
     
@@ -69,7 +73,9 @@ router.get('/', optionalAuth, async (req, res) => {
       );
       
       const userAvgRating = await pool.query(
-        'SELECT AVG(rating) as avg FROM reviews WHERE user_id = $1 AND rating IS NOT NULL',
+        `SELECT AVG((performance_rating + directing_rating + screenplay_rating) / 3.0) as avg 
+         FROM reviews 
+         WHERE user_id = $1 AND performance_rating IS NOT NULL AND directing_rating IS NOT NULL AND screenplay_rating IS NOT NULL`,
         [req.user.id]
       );
       

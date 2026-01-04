@@ -96,15 +96,27 @@ router.get('/:id', optionalAuth, async (req, res) => {
 // Create review (authenticated only)
 router.post('/', requireAuth, async (req, res) => {
   try {
-    const { movie_id, rating, review_text, watched_date, tags } = req.body;
+    const { movie_id, performance_rating, directing_rating, screenplay_rating, review_text, watched_date, tags } = req.body;
     
     if (!movie_id) {
       return res.status(400).json({ message: 'Movie ID is required' });
     }
     
-    if (!rating || rating < 1 || rating > 10) {
-      return res.status(400).json({ message: 'Rating must be between 1 and 10' });
+    // Validate all three ratings
+    if (!performance_rating || performance_rating < 1 || performance_rating > 10) {
+      return res.status(400).json({ message: 'Performance rating must be between 1 and 10' });
     }
+    
+    if (!directing_rating || directing_rating < 1 || directing_rating > 10) {
+      return res.status(400).json({ message: 'Directing rating must be between 1 and 10' });
+    }
+    
+    if (!screenplay_rating || screenplay_rating < 1 || screenplay_rating > 10) {
+      return res.status(400).json({ message: 'Screenplay rating must be between 1 and 10' });
+    }
+    
+    // Calculate overall rating as average of the three
+    const overallRating = Math.round((parseInt(performance_rating) + parseInt(directing_rating) + parseInt(screenplay_rating)) / 3);
     
     // Check if movie exists
     const movieCheck = await pool.query('SELECT id FROM movies WHERE id = $1', [movie_id]);
@@ -126,13 +138,16 @@ router.post('/', requireAuth, async (req, res) => {
     const finalWatchedDate = watched_date || new Date().toISOString().split('T')[0];
 
     const result = await pool.query(
-      `INSERT INTO reviews (movie_id, user_id, rating, review_text, watched_date, tags)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO reviews (movie_id, user_id, rating, performance_rating, directing_rating, screenplay_rating, review_text, watched_date, tags)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
       [
         movie_id,
         req.user.id,
-        rating,
+        overallRating, // Keep overall rating for backward compatibility
+        parseInt(performance_rating),
+        parseInt(directing_rating),
+        parseInt(screenplay_rating),
         review_text || null,
         finalWatchedDate,
         tags && Array.isArray(tags) ? tags : null
@@ -187,12 +202,24 @@ router.put('/:id', requireAuth, async (req, res) => {
     const result = await pool.query(
       `UPDATE reviews 
        SET rating = COALESCE($1, rating),
-           review_text = COALESCE($2, review_text),
-           watched_date = COALESCE($3, watched_date),
-           tags = COALESCE($4, tags)
-       WHERE id = $5
+           performance_rating = COALESCE($2, performance_rating),
+           directing_rating = COALESCE($3, directing_rating),
+           screenplay_rating = COALESCE($4, screenplay_rating),
+           review_text = COALESCE($5, review_text),
+           watched_date = COALESCE($6, watched_date),
+           tags = COALESCE($7, tags)
+       WHERE id = $8
        RETURNING *`,
-      [rating, review_text, watched_date, tags && Array.isArray(tags) ? tags : null, id]
+      [
+        overallRating,
+        performance_rating !== undefined ? parseInt(performance_rating) : null,
+        directing_rating !== undefined ? parseInt(directing_rating) : null,
+        screenplay_rating !== undefined ? parseInt(screenplay_rating) : null,
+        review_text,
+        watched_date,
+        tags && Array.isArray(tags) ? tags : null,
+        id
+      ]
     );
     
     // Get full review with movie and user info

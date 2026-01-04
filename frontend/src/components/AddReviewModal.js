@@ -4,7 +4,9 @@ import './AddReviewModal.css';
 
 const AddReviewModal = ({ movie, onClose, onSuccess, initialWatchedDate }) => {
   const [formData, setFormData] = useState({
-    rating: '',
+    performance_rating: '',
+    directing_rating: '',
+    screenplay_rating: '',
     review_text: '',
     watched_date: initialWatchedDate || '',
     tags: ''
@@ -24,8 +26,19 @@ const AddReviewModal = ({ movie, onClose, onSuccess, initialWatchedDate }) => {
     e.preventDefault();
     setError('');
 
-    if (!formData.rating || formData.rating < 1 || formData.rating > 10) {
-      setError('Rating must be between 1 and 10');
+    // Validate all three ratings
+    if (!formData.performance_rating || formData.performance_rating < 1 || formData.performance_rating > 10) {
+      setError('Performance rating must be between 1 and 10');
+      return;
+    }
+    
+    if (!formData.directing_rating || formData.directing_rating < 1 || formData.directing_rating > 10) {
+      setError('Directing rating must be between 1 and 10');
+      return;
+    }
+    
+    if (!formData.screenplay_rating || formData.screenplay_rating < 1 || formData.screenplay_rating > 10) {
+      setError('Screenplay rating must be between 1 and 10');
       return;
     }
 
@@ -41,7 +54,9 @@ const AddReviewModal = ({ movie, onClose, onSuccess, initialWatchedDate }) => {
 
       await api.post('/reviews', {
         movie_id: movie.id,
-        rating: parseInt(formData.rating),
+        performance_rating: parseInt(formData.performance_rating),
+        directing_rating: parseInt(formData.directing_rating),
+        screenplay_rating: parseInt(formData.screenplay_rating),
         review_text: formData.review_text || null,
         watched_date: watchedDate,
         tags: tagsArray.length > 0 ? tagsArray : null
@@ -65,13 +80,37 @@ const AddReviewModal = ({ movie, onClose, onSuccess, initialWatchedDate }) => {
         </div>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Rating (1-10) *</label>
+            <label>Performance Rating (1-10) *</label>
             <input
               type="number"
-              name="rating"
+              name="performance_rating"
               min="1"
               max="10"
-              value={formData.rating}
+              value={formData.performance_rating}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label>Directing Rating (1-10) *</label>
+            <input
+              type="number"
+              name="directing_rating"
+              min="1"
+              max="10"
+              value={formData.directing_rating}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label>Screenplay Rating (1-10) *</label>
+            <input
+              type="number"
+              name="screenplay_rating"
+              min="1"
+              max="10"
+              value={formData.screenplay_rating}
               onChange={handleChange}
               required
             />

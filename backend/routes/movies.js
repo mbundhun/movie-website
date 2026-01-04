@@ -29,7 +29,7 @@ router.get('/', optionalAuth, async (req, res) => {
     
     let query = `
       SELECT m.*, 
-             COALESCE(AVG(r.rating), 0) as average_rating,
+             COALESCE(AVG((r.performance_rating + r.directing_rating + r.screenplay_rating) / 3.0), 0) as average_rating,
              COUNT(DISTINCT r.id) as review_count
       FROM movies m
       LEFT JOIN reviews r ON m.id = r.movie_id
@@ -64,13 +64,13 @@ router.get('/', optionalAuth, async (req, res) => {
     
     if (rating_min) {
       paramCount++;
-      query += ` AND (SELECT COALESCE(AVG(rating), 0) FROM reviews WHERE movie_id = m.id) >= $${paramCount}`;
+      query += ` AND (SELECT COALESCE(AVG((performance_rating + directing_rating + screenplay_rating) / 3.0), 0) FROM reviews WHERE movie_id = m.id) >= $${paramCount}`;
       params.push(parseFloat(rating_min));
     }
     
     if (rating_max) {
       paramCount++;
-      query += ` AND (SELECT COALESCE(AVG(rating), 0) FROM reviews WHERE movie_id = m.id) <= $${paramCount}`;
+      query += ` AND (SELECT COALESCE(AVG((performance_rating + directing_rating + screenplay_rating) / 3.0), 0) FROM reviews WHERE movie_id = m.id) <= $${paramCount}`;
       params.push(parseFloat(rating_max));
     }
     
