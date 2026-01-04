@@ -24,7 +24,9 @@ const Movies = () => {
     imdb_id: ''
   });
   const [selectedGenres, setSelectedGenres] = useState([]);
-  const { authenticated } = useAuth();
+  const [watchedMovies, setWatchedMovies] = useState(new Set());
+  const [favoriteMovies, setFavoriteMovies] = useState(new Set());
+  const { authenticated, user } = useAuth();
   const navigate = useNavigate();
 
   const fetchGenres = useCallback(async () => {
@@ -83,13 +85,7 @@ const Movies = () => {
     fetchMovies();
   }, [fetchMovies]);
   
-  useEffect(() => {
-    if (authenticated && movies.length > 0) {
-      fetchWatchedAndFavoriteStatus();
-    }
-  }, [authenticated, movies]);
-  
-  const fetchWatchedAndFavoriteStatus = async () => {
+  const fetchWatchedAndFavoriteStatus = useCallback(async () => {
     if (!authenticated || !user) return;
     
     try {
@@ -112,7 +108,13 @@ const Movies = () => {
     } catch (error) {
       console.error('Error fetching watched/favorite status:', error);
     }
-  };
+  }, [authenticated, user]);
+  
+  useEffect(() => {
+    if (authenticated && movies.length > 0) {
+      fetchWatchedAndFavoriteStatus();
+    }
+  }, [authenticated, movies, fetchWatchedAndFavoriteStatus]);
   
   const handleToggleFavorite = async (movieId, e) => {
     e.preventDefault();

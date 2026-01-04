@@ -18,6 +18,8 @@ const MovieDetail = () => {
   const [expandedReviews, setExpandedReviews] = useState({});
   const [reviewPage, setReviewPage] = useState(1);
   const reviewsPerPage = 5;
+  const [isWatched, setIsWatched] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
 
   const fetchMovieDetails = useCallback(async () => {
     try {
