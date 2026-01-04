@@ -108,5 +108,10 @@
 
 .movie-actions .btn {
   width: 100%;
+  max-width: 100%; /* Override max-width for full-width buttons in cards */
+}
+
+.page-header .btn {
+  flex-shrink: 0; /* Prevent button from shrinking */
 }
 

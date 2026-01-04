@@ -108,7 +108,7 @@ const Movies = () => {
           </button>
         ) : (
           <button className="btn btn-primary" onClick={() => navigate('/login')}>
-            Login to Add Movie
+            Add Movie
           </button>
         )}
       </div>
