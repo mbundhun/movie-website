@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import api from '../services/api';
+import StarRating from './StarRating';
 import './AddReviewModal.css';
 
 const AddReviewModal = ({ movie, onClose, onSuccess, initialWatchedDate }) => {
@@ -27,18 +28,18 @@ const AddReviewModal = ({ movie, onClose, onSuccess, initialWatchedDate }) => {
     setError('');
 
     // Validate all three ratings
-    if (!formData.performance_rating || formData.performance_rating < 1 || formData.performance_rating > 10) {
-      setError('Performance rating must be between 1 and 10');
+    if (!formData.performance_rating || formData.performance_rating < 0.5 || formData.performance_rating > 10) {
+      setError('Performance rating is required');
       return;
     }
     
-    if (!formData.directing_rating || formData.directing_rating < 1 || formData.directing_rating > 10) {
-      setError('Directing rating must be between 1 and 10');
+    if (!formData.directing_rating || formData.directing_rating < 0.5 || formData.directing_rating > 10) {
+      setError('Direction rating is required');
       return;
     }
     
-    if (!formData.screenplay_rating || formData.screenplay_rating < 1 || formData.screenplay_rating > 10) {
-      setError('Screenplay rating must be between 1 and 10');
+    if (!formData.screenplay_rating || formData.screenplay_rating < 0.5 || formData.screenplay_rating > 10) {
+      setError('Screenplay rating is required');
       return;
     }
 
@@ -54,9 +55,9 @@ const AddReviewModal = ({ movie, onClose, onSuccess, initialWatchedDate }) => {
 
       await api.post('/reviews', {
         movie_id: movie.id,
-        performance_rating: parseInt(formData.performance_rating),
-        directing_rating: parseInt(formData.directing_rating),
-        screenplay_rating: parseInt(formData.screenplay_rating),
+        performance_rating: parseFloat(formData.performance_rating),
+        directing_rating: parseFloat(formData.directing_rating),
+        screenplay_rating: parseFloat(formData.screenplay_rating),
         review_text: formData.review_text || null,
         watched_date: watchedDate,
         tags: tagsArray.length > 0 ? tagsArray : null
@@ -79,42 +80,21 @@ const AddReviewModal = ({ movie, onClose, onSuccess, initialWatchedDate }) => {
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Performance Rating (1-10) *</label>
-            <input
-              type="number"
-              name="performance_rating"
-              min="1"
-              max="10"
-              value={formData.performance_rating}
-              onChange={handleChange}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Directing Rating (1-10) *</label>
-            <input
-              type="number"
-              name="directing_rating"
-              min="1"
-              max="10"
-              value={formData.directing_rating}
-              onChange={handleChange}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Screenplay Rating (1-10) *</label>
-            <input
-              type="number"
-              name="screenplay_rating"
-              min="1"
-              max="10"
-              value={formData.screenplay_rating}
-              onChange={handleChange}
-              required
-            />
-          </div>
+          <StarRating
+            label="Performance"
+            value={formData.performance_rating || 0}
+            onChange={(value) => setFormData({ ...formData, performance_rating: value })}
+          />
+          <StarRating
+            label="Direction"
+            value={formData.directing_rating || 0}
+            onChange={(value) => setFormData({ ...formData, directing_rating: value })}
+          />
+          <StarRating
+            label="Screenplay"
+            value={formData.screenplay_rating || 0}
+            onChange={(value) => setFormData({ ...formData, screenplay_rating: value })}
+          />
           <div className="form-group">
             <label>Review Text</label>
             <textarea

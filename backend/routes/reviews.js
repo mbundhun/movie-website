@@ -102,21 +102,25 @@ router.post('/', requireAuth, async (req, res) => {
       return res.status(400).json({ message: 'Movie ID is required' });
     }
     
-    // Validate all three ratings
-    if (!performance_rating || performance_rating < 1 || performance_rating > 10) {
-      return res.status(400).json({ message: 'Performance rating must be between 1 and 10' });
+    // Validate all three ratings (allow 0.5 increments from 0.5 to 10)
+    const perfRating = parseFloat(performance_rating);
+    const dirRating = parseFloat(directing_rating);
+    const scrRating = parseFloat(screenplay_rating);
+    
+    if (!performance_rating || perfRating < 0.5 || perfRating > 10 || (perfRating * 2) % 1 !== 0) {
+      return res.status(400).json({ message: 'Performance rating must be between 0.5 and 10 in 0.5 increments' });
     }
     
-    if (!directing_rating || directing_rating < 1 || directing_rating > 10) {
-      return res.status(400).json({ message: 'Directing rating must be between 1 and 10' });
+    if (!directing_rating || dirRating < 0.5 || dirRating > 10 || (dirRating * 2) % 1 !== 0) {
+      return res.status(400).json({ message: 'Directing rating must be between 0.5 and 10 in 0.5 increments' });
     }
     
-    if (!screenplay_rating || screenplay_rating < 1 || screenplay_rating > 10) {
-      return res.status(400).json({ message: 'Screenplay rating must be between 1 and 10' });
+    if (!screenplay_rating || scrRating < 0.5 || scrRating > 10 || (scrRating * 2) % 1 !== 0) {
+      return res.status(400).json({ message: 'Screenplay rating must be between 0.5 and 10 in 0.5 increments' });
     }
     
-    // Calculate overall rating as average of the three
-    const overallRating = Math.round((parseInt(performance_rating) + parseInt(directing_rating) + parseInt(screenplay_rating)) / 3);
+    // Calculate overall rating as average of the three (rounded to nearest 0.5)
+    const overallRating = Math.round(((perfRating + dirRating + scrRating) / 3) * 2) / 2;
     
     // Check if movie exists
     const movieCheck = await pool.query('SELECT id FROM movies WHERE id = $1', [movie_id]);
@@ -145,9 +149,9 @@ router.post('/', requireAuth, async (req, res) => {
         movie_id,
         req.user.id,
         overallRating, // Keep overall rating for backward compatibility
-        parseInt(performance_rating),
-        parseInt(directing_rating),
-        parseInt(screenplay_rating),
+        perfRating,
+        dirRating,
+        scrRating,
         review_text || null,
         finalWatchedDate,
         tags && Array.isArray(tags) ? tags : null
@@ -212,9 +216,9 @@ router.put('/:id', requireAuth, async (req, res) => {
        RETURNING *`,
       [
         overallRating,
-        performance_rating !== undefined ? parseInt(performance_rating) : null,
-        directing_rating !== undefined ? parseInt(directing_rating) : null,
-        screenplay_rating !== undefined ? parseInt(screenplay_rating) : null,
+        performance_rating !== undefined ? parseFloat(performance_rating) : null,
+        directing_rating !== undefined ? parseFloat(directing_rating) : null,
+        screenplay_rating !== undefined ? parseFloat(screenplay_rating) : null,
         review_text,
         watched_date,
         tags && Array.isArray(tags) ? tags : null,
