@@ -81,19 +81,6 @@ const Movies = () => {
     fetchMovies();
   }, [fetchMovies]);
 
-  const handleSearch = async () => {
-    try {
-      setLoading(true);
-      const params = searchTerm ? { search: searchTerm, include_genres: 'true' } : { include_genres: 'true' };
-      const response = await api.get('/movies', { params });
-      setMovies(response.data.movies);
-    } catch (error) {
-      console.error('Error searching movies:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleAddMovie = async (e) => {
     e.preventDefault();
     if (!authenticated) {
