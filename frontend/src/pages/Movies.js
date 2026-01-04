@@ -4,6 +4,8 @@ import api from '../services/api';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import SearchBar from '../components/SearchBar';
 import AdvancedFilters from '../components/AdvancedFilters';
+import { MovieListSkeleton } from '../components/Skeleton';
+import EmptyState from '../components/EmptyState';
 import './Movies.css';
 
 const Movies = () => {
@@ -158,7 +160,14 @@ const Movies = () => {
   };
 
   if (loading) {
-    return <div className="loading">Loading movies...</div>;
+    return (
+      <div className="movies-page">
+        <div className="page-header">
+          <h1>Movies</h1>
+        </div>
+        <MovieListSkeleton count={8} />
+      </div>
+    );
   }
 
   return (
@@ -317,10 +326,13 @@ const Movies = () => {
             </div>
           ))
         ) : (
-          <div className="empty-state">
-            <h3>No movies found</h3>
-            <p>Try a different search term or add a new movie!</p>
-          </div>
+          <EmptyState
+            icon="🎬"
+            title="No movies found"
+            message="Try a different search term or add a new movie!"
+            actionLabel={authenticated ? "Add Movie" : undefined}
+            onAction={authenticated ? () => setShowAddForm(true) : undefined}
+          />
         )}
       </div>
     </div>
