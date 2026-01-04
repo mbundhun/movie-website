@@ -51,7 +51,7 @@
   color: #ddd;
 }
 
-.star-icon.half-filled::after {
+.star-icon.half-filled::before {
   content: '★';
   position: absolute;
   left: 0;
@@ -59,7 +59,7 @@
   width: 50%;
   overflow: hidden;
   color: #f39c12;
-  z-index: 1;
+  clip-path: inset(0 50% 0 0);
 }
 
 /* Invisible clickable halves over the star */
