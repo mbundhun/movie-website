@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import './Movies.css';
 
 const Movies = () => {
@@ -277,7 +277,9 @@ const Movies = () => {
                 <img src={movie.poster_url} alt={movie.title} className="movie-poster" />
               )}
               <div className="movie-info">
-                <h3>{movie.title}</h3>
+                <h3>
+                  <Link to={`/movies/${movie.id}`}>{movie.title}</Link>
+                </h3>
                 {movie.year && <p className="year">{movie.year}</p>}
                 {movie.director && <p className="director">Director: {movie.director}</p>}
                 {movie.genres && movie.genres.length > 0 && (

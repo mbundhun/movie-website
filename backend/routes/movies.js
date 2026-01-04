@@ -94,8 +94,8 @@ router.get('/:id', optionalAuth, async (req, res) => {
       movie.genres = genresResult.rows;
     }
     
-    // Optionally include cast
-    if (include_cast === 'true') {
+    // Include cast by default for detail page
+    if (include_cast === 'true' || include_cast === undefined) {
       const castResult = await pool.query(
         `SELECT c.*, mc.character_name, mc.cast_order
          FROM cast_table c
@@ -107,8 +107,8 @@ router.get('/:id', optionalAuth, async (req, res) => {
       movie.cast = castResult.rows;
     }
     
-    // Optionally include screenwriters
-    if (include_screenwriters === 'true') {
+    // Include screenwriters by default for detail page
+    if (include_screenwriters === 'true' || include_screenwriters === undefined) {
       const screenwritersResult = await pool.query(
         `SELECT s.*, ms.screenwriter_order
          FROM screenwriters s
