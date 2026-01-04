@@ -7,7 +7,7 @@ const router = express.Router();
 // Get all movies with optional filters
 router.get('/', optionalAuth, async (req, res) => {
   try {
-    const { search, year, genre, limit = 100, offset = 0 } = req.query;
+    const { search, year, genre, limit = 100, offset = 0, include_genres } = req.query;
     
     let query = 'SELECT * FROM movies WHERE 1=1';
     const params = [];
@@ -25,9 +25,14 @@ router.get('/', optionalAuth, async (req, res) => {
       params.push(parseInt(year));
     }
     
+    // Filter by genre using movie_genres junction table
     if (genre) {
       paramCount++;
-      query += ` AND genre ILIKE $${paramCount}`;
+      query += ` AND id IN (
+        SELECT movie_id FROM movie_genres mg
+        JOIN genres g ON mg.genre_id = g.id
+        WHERE g.name ILIKE $${paramCount}
+      )`;
       params.push(`%${genre}%`);
     }
     
@@ -35,10 +40,26 @@ router.get('/', optionalAuth, async (req, res) => {
     params.push(parseInt(limit), parseInt(offset));
     
     const result = await pool.query(query, params);
+    const movies = result.rows;
+    
+    // Optionally include genres for each movie
+    if (include_genres === 'true') {
+      for (let movie of movies) {
+        const genresResult = await pool.query(
+          `SELECT g.id, g.name
+           FROM genres g
+           JOIN movie_genres mg ON g.id = mg.genre_id
+           WHERE mg.movie_id = $1
+           ORDER BY g.name`,
+          [movie.id]
+        );
+        movie.genres = genresResult.rows;
+      }
+    }
     
     res.json({
-      movies: result.rows,
-      count: result.rows.length
+      movies: movies,
+      count: movies.length
     });
   } catch (error) {
     console.error('Error fetching movies:', error);
@@ -46,11 +67,11 @@ router.get('/', optionalAuth, async (req, res) => {
   }
 });
 
-// Get single movie by ID (optionally with cast and screenwriters)
+// Get single movie by ID (optionally with cast, screenwriters, and genres)
 router.get('/:id', optionalAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { include_cast, include_screenwriters } = req.query;
+    const { include_cast, include_screenwriters, include_genres } = req.query;
     
     const result = await pool.query('SELECT * FROM movies WHERE id = $1', [id]);
     
@@ -59,6 +80,19 @@ router.get('/:id', optionalAuth, async (req, res) => {
     }
     
     const movie = result.rows[0];
+    
+    // Optionally include genres
+    if (include_genres === 'true' || include_genres === undefined) {
+      const genresResult = await pool.query(
+        `SELECT g.id, g.name
+         FROM genres g
+         JOIN movie_genres mg ON g.id = mg.genre_id
+         WHERE mg.movie_id = $1
+         ORDER BY g.name`,
+        [id]
+      );
+      movie.genres = genresResult.rows;
+    }
     
     // Optionally include cast
     if (include_cast === 'true') {
@@ -95,54 +129,150 @@ router.get('/:id', optionalAuth, async (req, res) => {
 
 // Add new movie (authenticated only)
 router.post('/', requireAuth, async (req, res) => {
+  const client = await pool.connect();
   try {
-    const { title, year, director, genre, poster_url, imdb_id } = req.body;
+    await client.query('BEGIN');
+    
+    const { title, year, director, genres, poster_url, imdb_id } = req.body;
     
     if (!title) {
+      await client.query('ROLLBACK');
       return res.status(400).json({ message: 'Title is required' });
     }
     
-    const result = await pool.query(
-      `INSERT INTO movies (title, year, director, genre, poster_url, imdb_id)
-       VALUES ($1, $2, $3, $4, $5, $6)
+    // Insert movie (genre column kept for backward compatibility, but we'll use movie_genres)
+    const movieResult = await client.query(
+      `INSERT INTO movies (title, year, director, poster_url, imdb_id)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [title, year || null, director || null, genre || null, poster_url || null, imdb_id || null]
+      [title, year || null, director || null, poster_url || null, imdb_id || null]
     );
     
-    res.status(201).json(result.rows[0]);
+    const movie = movieResult.rows[0];
+    
+    // Add genres if provided
+    if (genres && Array.isArray(genres) && genres.length > 0) {
+      for (const genreName of genres) {
+        // Get or create genre
+        let genreResult = await client.query('SELECT id FROM genres WHERE name = $1', [genreName]);
+        
+        if (genreResult.rows.length === 0) {
+          // Create new genre if it doesn't exist
+          genreResult = await client.query(
+            'INSERT INTO genres (name) VALUES ($1) RETURNING id',
+            [genreName]
+          );
+        }
+        
+        const genreId = genreResult.rows[0].id;
+        
+        // Link movie to genre
+        await client.query(
+          'INSERT INTO movie_genres (movie_id, genre_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+          [movie.id, genreId]
+        );
+      }
+      
+      // Fetch genres for response
+      const genresResult = await client.query(
+        `SELECT g.id, g.name
+         FROM genres g
+         JOIN movie_genres mg ON g.id = mg.genre_id
+         WHERE mg.movie_id = $1
+         ORDER BY g.name`,
+        [movie.id]
+      );
+      movie.genres = genresResult.rows;
+    }
+    
+    await client.query('COMMIT');
+    res.status(201).json(movie);
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Error creating movie:', error);
     res.status(500).json({ message: 'Error creating movie' });
+  } finally {
+    client.release();
   }
 });
 
 // Update movie (authenticated only)
 router.put('/:id', requireAuth, async (req, res) => {
+  const client = await pool.connect();
   try {
-    const { id } = req.params;
-    const { title, year, director, genre, poster_url, imdb_id } = req.body;
+    await client.query('BEGIN');
     
-    const result = await pool.query(
+    const { id } = req.params;
+    const { title, year, director, genres, poster_url, imdb_id } = req.body;
+    
+    // Update movie basic info
+    const result = await client.query(
       `UPDATE movies 
        SET title = COALESCE($1, title),
            year = COALESCE($2, year),
            director = COALESCE($3, director),
-           genre = COALESCE($4, genre),
-           poster_url = COALESCE($5, poster_url),
-           imdb_id = COALESCE($6, imdb_id)
-       WHERE id = $7
+           poster_url = COALESCE($4, poster_url),
+           imdb_id = COALESCE($5, imdb_id)
+       WHERE id = $6
        RETURNING *`,
-      [title, year, director, genre, poster_url, imdb_id, id]
+      [title, year, director, poster_url, imdb_id, id]
     );
     
     if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ message: 'Movie not found' });
     }
     
-    res.json(result.rows[0]);
+    const movie = result.rows[0];
+    
+    // Update genres if provided
+    if (genres !== undefined) {
+      // Remove all existing genre associations
+      await client.query('DELETE FROM movie_genres WHERE movie_id = $1', [id]);
+      
+      // Add new genre associations
+      if (Array.isArray(genres) && genres.length > 0) {
+        for (const genreName of genres) {
+          // Get or create genre
+          let genreResult = await client.query('SELECT id FROM genres WHERE name = $1', [genreName]);
+          
+          if (genreResult.rows.length === 0) {
+            genreResult = await client.query(
+              'INSERT INTO genres (name) VALUES ($1) RETURNING id',
+              [genreName]
+            );
+          }
+          
+          const genreId = genreResult.rows[0].id;
+          
+          // Link movie to genre
+          await client.query(
+            'INSERT INTO movie_genres (movie_id, genre_id) VALUES ($1, $2)',
+            [id, genreId]
+          );
+        }
+      }
+      
+      // Fetch updated genres
+      const genresResult = await client.query(
+        `SELECT g.id, g.name
+         FROM genres g
+         JOIN movie_genres mg ON g.id = mg.genre_id
+         WHERE mg.movie_id = $1
+         ORDER BY g.name`,
+        [id]
+      );
+      movie.genres = genresResult.rows;
+    }
+    
+    await client.query('COMMIT');
+    res.json(movie);
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Error updating movie:', error);
     res.status(500).json({ message: 'Error updating movie' });
+  } finally {
+    client.release();
   }
 });
 

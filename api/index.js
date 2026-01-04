@@ -101,6 +101,7 @@ try {
     app.use('/api/stats', require('../backend/routes/stats'));
     app.use('/api/cast', require('../backend/routes/cast'));
     app.use('/api/screenwriters', require('../backend/routes/screenwriters'));
+    app.use('/api/genres', require('../backend/routes/genres'));
   } catch (routeError) {
     console.error('Error loading routes:', routeError);
     console.error('Route error stack:', routeError.stack);

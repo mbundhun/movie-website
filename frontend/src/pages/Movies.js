@@ -9,25 +9,36 @@ const Movies = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [genres, setGenres] = useState([]);
   const [formData, setFormData] = useState({
     title: '',
     year: '',
     director: '',
-    genre: '',
     poster_url: '',
     imdb_id: ''
   });
+  const [selectedGenres, setSelectedGenres] = useState([]);
   const { authenticated } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchMovies();
+    fetchGenres();
   }, []);
+
+  const fetchGenres = async () => {
+    try {
+      const response = await api.get('/genres');
+      setGenres(response.data.genres || []);
+    } catch (error) {
+      console.error('Error fetching genres:', error);
+    }
+  };
 
   const fetchMovies = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/movies');
+      const response = await api.get('/movies?include_genres=true');
       setMovies(response.data.movies);
     } catch (error) {
       console.error('Error fetching movies:', error);
@@ -39,7 +50,7 @@ const Movies = () => {
   const handleSearch = async () => {
     try {
       setLoading(true);
-      const params = searchTerm ? { search: searchTerm } : {};
+      const params = searchTerm ? { search: searchTerm, include_genres: 'true' } : { include_genres: 'true' };
       const response = await api.get('/movies', { params });
       setMovies(response.data.movies);
     } catch (error) {
@@ -57,22 +68,48 @@ const Movies = () => {
     }
 
     try {
-      const response = await api.post('/movies', formData);
+      // Send genres as array of genre names
+      const genreNames = selectedGenres.map(genreId => {
+        const genre = genres.find(g => g.id === genreId);
+        return genre ? genre.name : null;
+      }).filter(Boolean);
+      
+      const movieData = {
+        ...formData,
+        genres: genreNames
+      };
+      
+      const response = await api.post('/movies', movieData);
       setMovies([response.data, ...movies]);
       setFormData({
         title: '',
         year: '',
         director: '',
-        genre: '',
         poster_url: '',
         imdb_id: ''
       });
+      setSelectedGenres([]);
       setShowAddForm(false);
       alert('Movie added successfully!');
     } catch (error) {
       console.error('Error adding movie:', error);
       alert(error.response?.data?.message || 'Failed to add movie');
     }
+  };
+
+  const handleGenreToggle = (genreId) => {
+    setSelectedGenres(prev => {
+      if (prev.includes(genreId)) {
+        return prev.filter(id => id !== genreId);
+      } else {
+        return [...prev, genreId];
+      }
+    });
+  };
+
+  const formatGenres = (genresArray) => {
+    if (!genresArray || genresArray.length === 0) return '';
+    return genresArray.map(g => g.name).join(', ');
   };
 
   const handleAddToWatchlist = async (movieId) => {
@@ -146,12 +183,27 @@ const Movies = () => {
                 />
               </div>
               <div className="form-group">
-                <label>Genre</label>
-                <input
-                  type="text"
-                  value={formData.genre}
-                  onChange={(e) => setFormData({ ...formData, genre: e.target.value })}
-                />
+                <label>Genres</label>
+                <div className="genres-selector">
+                  {genres.map(genre => (
+                    <label key={genre.id} className="genre-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={selectedGenres.includes(genre.id)}
+                        onChange={() => handleGenreToggle(genre.id)}
+                      />
+                      <span>{genre.name}</span>
+                    </label>
+                  ))}
+                </div>
+                {selectedGenres.length > 0 && (
+                  <div className="selected-genres">
+                    Selected: {selectedGenres.map(id => {
+                      const genre = genres.find(g => g.id === id);
+                      return genre ? genre.name : null;
+                    }).filter(Boolean).join(', ')}
+                  </div>
+                )}
               </div>
             </div>
             <div className="form-group">
@@ -209,7 +261,11 @@ const Movies = () => {
                 <h3>{movie.title}</h3>
                 {movie.year && <p className="year">{movie.year}</p>}
                 {movie.director && <p className="director">Director: {movie.director}</p>}
-                {movie.genre && <p className="genre">Genre: {movie.genre}</p>}
+                {movie.genres && movie.genres.length > 0 && (
+                  <p className="genre">
+                    {movie.genres.length > 1 ? 'Genres' : 'Genre'}: {formatGenres(movie.genres)}
+                  </p>
+                )}
                 <div className="movie-actions">
                   <button
                     className="btn btn-primary"
