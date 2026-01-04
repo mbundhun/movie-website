@@ -22,24 +22,30 @@ const StarRating = ({ value, onChange, label }) => {
     
     const isFullStar = displayValue >= fullStarValue;
     const isHalfStar = displayValue >= halfStarValue && displayValue < fullStarValue;
+    const isEmptyStar = displayValue < halfStarValue;
 
     return (
       <div key={starIndex} className="star-container">
         <div
-          className={`star-half star-left ${isHalfStar || isFullStar ? 'filled' : ''}`}
-          onClick={() => handleStarClick(halfStarValue)}
-          onMouseEnter={() => setHoverValue(halfStarValue)}
+          className="star-full"
           onMouseLeave={handleMouseLeave}
         >
-          <span className="star-icon">★</span>
-        </div>
-        <div
-          className={`star-half star-right ${isFullStar ? 'filled' : ''}`}
-          onClick={() => handleStarClick(fullStarValue)}
-          onMouseEnter={() => setHoverValue(fullStarValue)}
-          onMouseLeave={handleMouseLeave}
-        >
-          <span className="star-icon">★</span>
+          <span className={`star-icon ${isFullStar ? 'filled' : isHalfStar ? 'half-filled' : ''}`}>
+            ★
+          </span>
+          {/* Invisible clickable halves */}
+          <div
+            className="star-half-clickable star-left-clickable"
+            onClick={() => handleStarClick(halfStarValue)}
+            onMouseEnter={() => setHoverValue(halfStarValue)}
+            title={`${halfStarValue}/10`}
+          />
+          <div
+            className="star-half-clickable star-right-clickable"
+            onClick={() => handleStarClick(fullStarValue)}
+            onMouseEnter={() => setHoverValue(fullStarValue)}
+            title={`${fullStarValue}/10`}
+          />
         </div>
       </div>
     );

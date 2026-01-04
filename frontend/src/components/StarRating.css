@@ -12,51 +12,77 @@
 .star-rating {
   display: flex;
   align-items: center;
-  gap: 0.1rem;
+  gap: 0.25rem;
   flex-wrap: wrap;
 }
 
 .star-container {
   position: relative;
   display: inline-block;
-  width: 24px;
-  height: 24px;
-  cursor: pointer;
+  width: 28px;
+  height: 28px;
   font-size: 1.5rem;
   line-height: 1;
 }
 
-.star-half {
-  position: absolute;
-  top: 0;
-  width: 12px;
-  height: 24px;
-  overflow: hidden;
-  transition: color 0.1s;
+.star-full {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .star-icon {
   display: inline-block;
   color: #ddd;
-  transition: color 0.1s;
+  transition: color 0.2s;
+  position: relative;
+  z-index: 1;
 }
 
-.star-half.filled .star-icon {
+.star-icon.filled {
   color: #f39c12;
 }
 
-.star-half:hover .star-icon {
-  color: #f39c12;
+.star-icon.half-filled {
+  position: relative;
+  color: #ddd;
 }
 
-.star-left {
+.star-icon.half-filled::after {
+  content: '★';
+  position: absolute;
   left: 0;
-  text-align: left;
+  top: 0;
+  width: 50%;
+  overflow: hidden;
+  color: #f39c12;
+  z-index: 1;
 }
 
-.star-right {
+/* Invisible clickable halves over the star */
+.star-half-clickable {
+  position: absolute;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.star-left-clickable {
+  left: 0;
+}
+
+.star-right-clickable {
   right: 0;
-  text-align: right;
+}
+
+.star-half-clickable:hover ~ .star-icon,
+.star-left-clickable:hover ~ .star-icon {
+  color: #f39c12;
 }
 
 .star-rating-value {
