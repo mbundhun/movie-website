@@ -115,54 +115,100 @@
   flex-shrink: 0; /* Prevent button from shrinking */
 }
 
-/* Genres Selector */
-.genres-selector {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 0.75rem;
+/* Genres Dropdown */
+.genres-dropdown {
+  width: 100%;
+  min-height: 150px;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  background-color: white;
+  cursor: pointer;
   margin-top: 0.5rem;
+}
+
+.genres-dropdown:focus {
+  border-color: #3498db;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.genres-dropdown option {
+  padding: 0.5rem;
+  cursor: pointer;
+}
+
+.genres-dropdown option:checked {
+  background-color: #3498db;
+  color: white;
+}
+
+.genre-hint {
+  display: block;
+  margin-top: 0.5rem;
+  color: #7f8c8d;
+  font-size: 0.85rem;
+}
+
+/* Selected Genres Display */
+.selected-genres-display {
+  margin-top: 1rem;
   padding: 1rem;
   background-color: #f8f9fa;
   border-radius: 4px;
   border: 1px solid #e0e0e0;
-  max-height: 300px;
-  overflow-y: auto;
 }
 
-.genre-checkbox {
+.selected-genres-display strong {
+  display: block;
+  margin-bottom: 0.75rem;
+  color: #2c3e50;
+  font-size: 0.9rem;
+}
+
+.selected-genres-tags {
   display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.genre-tag {
+  display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  cursor: pointer;
-  padding: 0.5rem;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-  user-select: none;
-}
-
-.genre-checkbox:hover {
-  background-color: #e8f4f8;
-}
-
-.genre-checkbox input[type="checkbox"] {
-  cursor: pointer;
-  width: 18px;
-  height: 18px;
-  accent-color: #3498db;
-}
-
-.genre-checkbox span {
-  font-size: 0.95rem;
-  color: #2c3e50;
-}
-
-.selected-genres {
-  margin-top: 0.75rem;
-  padding: 0.5rem;
-  background-color: #e8f5e9;
-  border-radius: 4px;
+  padding: 0.4rem 0.75rem;
+  background-color: #3498db;
+  color: white;
+  border-radius: 20px;
   font-size: 0.9rem;
-  color: #2e7d32;
   font-weight: 500;
+}
+
+.remove-genre-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+  line-height: 1;
+}
+
+.remove-genre-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.remove-genre-btn:focus {
+  outline: 2px solid white;
+  outline-offset: 2px;
 }
 

@@ -184,26 +184,45 @@ const Movies = () => {
               </div>
               <div className="form-group">
                 <label>Genres</label>
-                <div className="genres-selector">
+                <select
+                  multiple
+                  className="genres-dropdown"
+                  value={selectedGenres.map(String)}
+                  onChange={(e) => {
+                    const selected = Array.from(e.target.selectedOptions, option => parseInt(option.value));
+                    setSelectedGenres(selected);
+                  }}
+                >
                   {genres.map(genre => (
-                    <label key={genre.id} className="genre-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={selectedGenres.includes(genre.id)}
-                        onChange={() => handleGenreToggle(genre.id)}
-                      />
-                      <span>{genre.name}</span>
-                    </label>
+                    <option key={genre.id} value={genre.id}>
+                      {genre.name}
+                    </option>
                   ))}
-                </div>
+                </select>
                 {selectedGenres.length > 0 && (
-                  <div className="selected-genres">
-                    Selected: {selectedGenres.map(id => {
-                      const genre = genres.find(g => g.id === id);
-                      return genre ? genre.name : null;
-                    }).filter(Boolean).join(', ')}
+                  <div className="selected-genres-display">
+                    <strong>Selected genres:</strong>
+                    <div className="selected-genres-tags">
+                      {selectedGenres.map(id => {
+                        const genre = genres.find(g => g.id === id);
+                        return genre ? (
+                          <span key={id} className="genre-tag">
+                            {genre.name}
+                            <button
+                              type="button"
+                              className="remove-genre-btn"
+                              onClick={() => handleGenreToggle(genre.id)}
+                              aria-label={`Remove ${genre.name}`}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ) : null;
+                      }).filter(Boolean)}
+                    </div>
                   </div>
                 )}
+                <small className="genre-hint">Hold Ctrl (Windows) or Cmd (Mac) to select multiple genres</small>
               </div>
             </div>
             <div className="form-group">
