@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Header from './components/Header';
 import { MovieListSkeleton } from './components/Skeleton';
+import AdminDebug from './components/AdminDebug'; // Temporary debug component
 import './App.css';
 
 // Lazy load pages for code splitting
