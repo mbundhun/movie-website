@@ -187,7 +187,7 @@ router.post('/', requireAuth, async (req, res) => {
 router.put('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { rating, review_text, watched_date, tags } = req.body;
+    const { performance_rating, directing_rating, screenplay_rating, review_text, watched_date, tags } = req.body;
     
     // Check if review exists and belongs to user
     const reviewCheck = await pool.query(
