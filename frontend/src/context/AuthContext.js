@@ -52,6 +52,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', response.data.token);
       setUser(response.data.user);
       setAuthenticated(true);
+      await checkAuth(); // Refresh to get latest admin status
       return { success: true };
     } catch (error) {
       return {
@@ -67,6 +68,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', response.data.token);
       setUser(response.data.user);
       setAuthenticated(true);
+      await checkAuth(); // Refresh to get latest admin status
       return { success: true };
     } catch (error) {
       return {

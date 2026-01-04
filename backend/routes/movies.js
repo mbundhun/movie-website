@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../config/database');
 const { optionalAuth, requireAuth } = require('../middleware/auth');
+const { requireAdmin } = require('../middleware/admin');
 
 const router = express.Router();
 
@@ -316,8 +317,8 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
-// Update movie (authenticated only)
-router.put('/:id', requireAuth, async (req, res) => {
+// Update movie (admin only)
+router.put('/:id', requireAuth, requireAdmin, async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -396,8 +397,8 @@ router.put('/:id', requireAuth, async (req, res) => {
   }
 });
 
-// Delete movie (authenticated only)
-router.delete('/:id', requireAuth, async (req, res) => {
+// Delete movie (admin only)
+router.delete('/:id', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     

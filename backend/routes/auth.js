@@ -36,7 +36,7 @@ router.post('/register', async (req, res) => {
     
     // Create user
     const result = await pool.query(
-      'INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id, username, email, created_at',
+      'INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id, username, email, is_admin, created_at',
       [username, email, passwordHash]
     );
     
@@ -55,7 +55,8 @@ router.post('/register', async (req, res) => {
       user: {
         id: user.id,
         username: user.username,
-        email: user.email
+        email: user.email,
+        is_admin: user.is_admin || false
       }
     });
   } catch (error) {
@@ -76,7 +77,7 @@ router.post('/login', async (req, res) => {
     
     // Find user
     const result = await pool.query(
-      'SELECT id, username, email, password_hash FROM users WHERE username = $1 OR email = $1',
+      'SELECT id, username, email, password_hash, is_admin FROM users WHERE username = $1 OR email = $1',
       [username]
     );
     
@@ -106,7 +107,8 @@ router.post('/login', async (req, res) => {
       user: {
         id: user.id,
         username: user.username,
-        email: user.email
+        email: user.email,
+        is_admin: user.is_admin || false
       }
     });
   } catch (error) {

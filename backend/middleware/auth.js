@@ -9,7 +9,7 @@ const optionalAuth = async (req, res, next) => {
     if (token) {
       try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const result = await pool.query('SELECT id, username, email FROM users WHERE id = $1', [decoded.userId]);
+        const result = await pool.query('SELECT id, username, email, is_admin FROM users WHERE id = $1', [decoded.userId]);
         
         if (result.rows.length > 0) {
           req.user = result.rows[0];
@@ -36,7 +36,7 @@ const requireAuth = async (req, res, next) => {
     }
     
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const result = await pool.query('SELECT id, username, email FROM users WHERE id = $1', [decoded.userId]);
+    const result = await pool.query('SELECT id, username, email, is_admin FROM users WHERE id = $1', [decoded.userId]);
     
     if (result.rows.length === 0) {
       return res.status(401).json({ message: 'User not found' });

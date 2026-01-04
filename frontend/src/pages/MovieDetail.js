@@ -8,7 +8,7 @@ import './MovieDetail.css';
 const MovieDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { authenticated } = useAuth();
+  const { authenticated, user } = useAuth();
   const [movie, setMovie] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [relatedMovies, setRelatedMovies] = useState([]);
@@ -188,6 +188,14 @@ const MovieDetail = () => {
           <div className="quick-actions">
             {authenticated && (
               <>
+                {user?.is_admin && (
+                  <button 
+                    className="btn btn-secondary" 
+                    onClick={() => navigate(`/movies/${id}/edit`)}
+                  >
+                    Edit Movie
+                  </button>
+                )}
                 <button className="btn btn-primary" onClick={() => setShowAddReview(true)}>
                   Write Review
                 </button>
