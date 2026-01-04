@@ -421,8 +421,30 @@ const MovieDetail = () => {
               <div key={review.id} className="review-item">
                 <div className="review-header">
                   <div className="review-rating">
-                    {'★'.repeat(review.rating)}{'☆'.repeat(10 - review.rating)}
-                    <span className="rating-number">{review.rating}/10</span>
+                    {(() => {
+                      // Show three ratings if available, otherwise show overall rating
+                      if (review.performance_rating && review.directing_rating && review.screenplay_rating) {
+                        const avgRating = Math.round((review.performance_rating + review.directing_rating + review.screenplay_rating) / 3);
+                        return (
+                          <>
+                            {'★'.repeat(avgRating)}{'☆'.repeat(10 - avgRating)}
+                            <span className="rating-number">{avgRating}/10</span>
+                            <div className="detailed-ratings">
+                              <span>Performance: {review.performance_rating}/10</span>
+                              <span>Directing: {review.directing_rating}/10</span>
+                              <span>Screenplay: {review.screenplay_rating}/10</span>
+                            </div>
+                          </>
+                        );
+                      } else {
+                        return (
+                          <>
+                            {'★'.repeat(review.rating || 0)}{'☆'.repeat(10 - (review.rating || 0))}
+                            <span className="rating-number">{review.rating || 0}/10</span>
+                          </>
+                        );
+                      }
+                    })()}
                   </div>
                   {review.user_username && (
                     <span className="review-author">by {review.user_username}</span>
