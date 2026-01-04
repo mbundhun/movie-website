@@ -297,6 +297,19 @@
   font-size: 1rem;
 }
 
+.detailed-ratings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.detailed-ratings span {
+  display: inline-block;
+}
+
 .review-author {
   color: #7f8c8d;
   font-size: 0.9rem;
