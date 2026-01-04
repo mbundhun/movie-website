@@ -7,28 +7,82 @@ const router = express.Router();
 // Get all movies with optional filters
 router.get('/', optionalAuth, async (req, res) => {
   try {
-    const { search, year, genre, limit = 100, offset = 0, include_genres } = req.query;
+    const { 
+      search, 
+      year, 
+      genre, 
+      genre_ids,
+      year_min,
+      year_max,
+      rating_min,
+      rating_max,
+      director,
+      has_reviews,
+      in_watchlist,
+      sort_by = 'created_at',
+      sort_order = 'desc',
+      limit = 100, 
+      offset = 0, 
+      include_genres 
+    } = req.query;
     
-    let query = 'SELECT * FROM movies WHERE 1=1';
+    let query = `
+      SELECT m.*, 
+             COALESCE(AVG(r.rating), 0) as average_rating,
+             COUNT(DISTINCT r.id) as review_count
+      FROM movies m
+      LEFT JOIN reviews r ON m.id = r.movie_id
+      WHERE 1=1
+    `;
     const params = [];
     let paramCount = 0;
     
     if (search) {
       paramCount++;
-      query += ` AND title ILIKE $${paramCount}`;
+      query += ` AND m.title ILIKE $${paramCount}`;
       params.push(`%${search}%`);
     }
     
     if (year) {
       paramCount++;
-      query += ` AND year = $${paramCount}`;
+      query += ` AND m.year = $${paramCount}`;
       params.push(parseInt(year));
+    }
+    
+    if (year_min) {
+      paramCount++;
+      query += ` AND m.year >= $${paramCount}`;
+      params.push(parseInt(year_min));
+    }
+    
+    if (year_max) {
+      paramCount++;
+      query += ` AND m.year <= $${paramCount}`;
+      params.push(parseInt(year_max));
+    }
+    
+    if (rating_min) {
+      paramCount++;
+      query += ` AND (SELECT COALESCE(AVG(rating), 0) FROM reviews WHERE movie_id = m.id) >= $${paramCount}`;
+      params.push(parseFloat(rating_min));
+    }
+    
+    if (rating_max) {
+      paramCount++;
+      query += ` AND (SELECT COALESCE(AVG(rating), 0) FROM reviews WHERE movie_id = m.id) <= $${paramCount}`;
+      params.push(parseFloat(rating_max));
+    }
+    
+    if (director) {
+      paramCount++;
+      query += ` AND m.director ILIKE $${paramCount}`;
+      params.push(`%${director}%`);
     }
     
     // Filter by genre using movie_genres junction table
     if (genre) {
       paramCount++;
-      query += ` AND id IN (
+      query += ` AND m.id IN (
         SELECT movie_id FROM movie_genres mg
         JOIN genres g ON mg.genre_id = g.id
         WHERE g.name ILIKE $${paramCount}
@@ -36,11 +90,77 @@ router.get('/', optionalAuth, async (req, res) => {
       params.push(`%${genre}%`);
     }
     
-    query += ` ORDER BY created_at DESC LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`;
+    // Filter by multiple genre IDs
+    if (genre_ids) {
+      const genreIdArray = Array.isArray(genre_ids) ? genre_ids : [genre_ids];
+      if (genreIdArray.length > 0) {
+        paramCount++;
+        const placeholders = genreIdArray.map((_, i) => `$${paramCount + i}`).join(',');
+        query += ` AND m.id IN (
+          SELECT movie_id FROM movie_genres
+          WHERE genre_id IN (${placeholders})
+          GROUP BY movie_id
+          HAVING COUNT(DISTINCT genre_id) = $${paramCount + genreIdArray.length}
+        )`;
+        params.push(...genreIdArray.map(id => parseInt(id)));
+        paramCount += genreIdArray.length - 1;
+      }
+    }
+    
+    if (has_reviews === 'true') {
+      query += ` AND EXISTS (SELECT 1 FROM reviews WHERE movie_id = m.id)`;
+    } else if (has_reviews === 'false') {
+      query += ` AND NOT EXISTS (SELECT 1 FROM reviews WHERE movie_id = m.id)`;
+    }
+    
+    if (in_watchlist === 'true' && req.user) {
+      paramCount++;
+      query += ` AND EXISTS (SELECT 1 FROM watchlist WHERE movie_id = m.id AND user_id = $${paramCount})`;
+      params.push(req.user.id);
+    } else if (in_watchlist === 'false' && req.user) {
+      paramCount++;
+      query += ` AND NOT EXISTS (SELECT 1 FROM watchlist WHERE movie_id = m.id AND user_id = $${paramCount})`;
+      params.push(req.user.id);
+    }
+    
+    query += ` GROUP BY m.id`;
+    
+    // Sorting
+    const validSortFields = ['title', 'year', 'created_at', 'rating', 'review_count'];
+    const sortField = validSortFields.includes(sort_by) ? sort_by : 'created_at';
+    const sortDir = sort_order.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+    
+    if (sortField === 'rating') {
+      query += ` ORDER BY average_rating ${sortDir}`;
+    } else if (sortField === 'review_count') {
+      query += ` ORDER BY review_count ${sortDir}`;
+    } else {
+      query += ` ORDER BY m.${sortField} ${sortDir}`;
+    }
+    
+    query += ` LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`;
     params.push(parseInt(limit), parseInt(offset));
     
     const result = await pool.query(query, params);
-    const movies = result.rows;
+    let movies = result.rows.map(row => {
+      const movie = {
+        id: row.id,
+        title: row.title,
+        year: row.year,
+        director: row.director,
+        poster_url: row.poster_url,
+        imdb_id: row.imdb_id,
+        created_at: row.created_at
+      };
+      // Convert average_rating and review_count to numbers
+      if (row.average_rating !== null) {
+        movie.average_rating = parseFloat(row.average_rating);
+      }
+      if (row.review_count !== null) {
+        movie.review_count = parseInt(row.review_count);
+      }
+      return movie;
+    });
     
     // Optionally include genres for each movie
     if (include_genres === 'true') {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import SearchBar from './SearchBar';
 import './Header.css';
 
 const Header = () => {
@@ -17,6 +18,9 @@ const Header = () => {
       <nav>
         <div className="nav-brand">
           <Link to="/">Movie Reviews</Link>
+        </div>
+        <div className="nav-search">
+          <SearchBar />
         </div>
         <ul className="nav-links">
           <li><Link to="/">Home</Link></li>

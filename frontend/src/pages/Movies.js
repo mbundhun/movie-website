@@ -1,13 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import SearchBar from '../components/SearchBar';
+import AdvancedFilters from '../components/AdvancedFilters';
 import './Movies.css';
 
 const Movies = () => {
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({});
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showAddForm, setShowAddForm] = useState(false);
   const [genres, setGenres] = useState([]);
   const [formData, setFormData] = useState({
@@ -21,31 +25,61 @@ const Movies = () => {
   const { authenticated } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchMovies();
-    fetchGenres();
-  }, []);
-
-  const fetchGenres = async () => {
+  const fetchGenres = useCallback(async () => {
     try {
       const response = await api.get('/genres');
       setGenres(response.data.genres || []);
     } catch (error) {
       console.error('Error fetching genres:', error);
     }
-  };
+  }, []);
 
-  const fetchMovies = async () => {
+  const fetchMovies = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get('/movies?include_genres=true');
-      setMovies(response.data.movies);
+      let queryParams = new URLSearchParams();
+      queryParams.append('include_genres', 'true');
+      
+      if (searchTerm) {
+        queryParams.append('search', searchTerm);
+      }
+      
+      if (filters.genres && filters.genres.length > 0) {
+        filters.genres.forEach(genreId => {
+          queryParams.append('genre_ids', genreId);
+        });
+      }
+      
+      if (filters.yearMin) queryParams.append('year_min', filters.yearMin);
+      if (filters.yearMax) queryParams.append('year_max', filters.yearMax);
+      if (filters.ratingMin) queryParams.append('rating_min', filters.ratingMin);
+      if (filters.ratingMax) queryParams.append('rating_max', filters.ratingMax);
+      if (filters.director) queryParams.append('director', filters.director);
+      if (filters.hasReviews) queryParams.append('has_reviews', filters.hasReviews);
+      if (filters.inWatchlist) queryParams.append('in_watchlist', filters.inWatchlist);
+      if (filters.sortBy) queryParams.append('sort_by', filters.sortBy);
+      if (filters.sortOrder) queryParams.append('sort_order', filters.sortOrder);
+      
+      const response = await api.get(`/movies?${queryParams.toString()}`);
+      setMovies(response.data.movies || []);
     } catch (error) {
       console.error('Error fetching movies:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchTerm, filters]);
+
+  useEffect(() => {
+    const urlSearch = searchParams.get('search');
+    if (urlSearch) {
+      setSearchTerm(urlSearch);
+    }
+    fetchGenres();
+  }, [searchParams, fetchGenres]);
+
+  useEffect(() => {
+    fetchMovies();
+  }, [fetchMovies]);
 
   const handleSearch = async () => {
     try {
@@ -127,9 +161,14 @@ const Movies = () => {
     }
   };
 
-  const filteredMovies = movies.filter(movie =>
-    !searchTerm || movie.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleSearch = (term) => {
+    setSearchTerm(term);
+    setSearchParams({ search: term });
+  };
+
+  const handleFilterChange = (newFilters) => {
+    setFilters(newFilters);
+  };
 
   if (loading) {
     return <div className="loading">Loading movies...</div>;
@@ -248,30 +287,14 @@ const Movies = () => {
         </div>
       )}
 
-      <div className="search-section">
-        <input
-          type="text"
-          placeholder="Search movies..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-        />
-        <button className="btn btn-primary" onClick={handleSearch}>
-          Search
-        </button>
-        {searchTerm && (
-          <button className="btn btn-secondary" onClick={() => {
-            setSearchTerm('');
-            fetchMovies();
-          }}>
-            Clear
-          </button>
-        )}
+      <div className="search-filters-section">
+        <SearchBar onSearch={handleSearch} placeholder="Search movies by title..." />
+        <AdvancedFilters onFilterChange={handleFilterChange} currentFilters={filters} />
       </div>
 
       <div className="movies-grid">
-        {filteredMovies.length > 0 ? (
-          filteredMovies.map((movie) => (
+        {movies.length > 0 ? (
+          movies.map((movie) => (
             <div key={movie.id} className="movie-card">
               {movie.poster_url && (
                 <img src={movie.poster_url} alt={movie.title} className="movie-poster" />
