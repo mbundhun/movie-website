@@ -122,6 +122,9 @@ router.post('/', requireAuth, async (req, res) => {
       return res.status(400).json({ message: 'You have already reviewed this movie' });
     }
     
+    // Automatically set watched_date to today if not provided
+    const finalWatchedDate = watched_date || new Date().toISOString().split('T')[0];
+
     const result = await pool.query(
       `INSERT INTO reviews (movie_id, user_id, rating, review_text, watched_date, tags)
        VALUES ($1, $2, $3, $4, $5, $6)
@@ -131,7 +134,7 @@ router.post('/', requireAuth, async (req, res) => {
         req.user.id,
         rating,
         review_text || null,
-        watched_date || null,
+        finalWatchedDate,
         tags && Array.isArray(tags) ? tags : null
       ]
     );

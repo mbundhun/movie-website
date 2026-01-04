@@ -36,11 +36,14 @@ const AddReviewModal = ({ movie, onClose, onSuccess, initialWatchedDate }) => {
         ? formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag)
         : [];
 
+      // Automatically set watched_date to today if not provided
+      const watchedDate = formData.watched_date || new Date().toISOString().split('T')[0];
+
       await api.post('/reviews', {
         movie_id: movie.id,
         rating: parseInt(formData.rating),
         review_text: formData.review_text || null,
-        watched_date: formData.watched_date || null,
+        watched_date: watchedDate,
         tags: tagsArray.length > 0 ? tagsArray : null
       });
 

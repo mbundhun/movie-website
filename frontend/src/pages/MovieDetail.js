@@ -90,13 +90,64 @@ const MovieDetail = () => {
     }
   };
 
-  const handleMarkAsWatched = () => {
+  const handleMarkAsWatched = async () => {
     if (!authenticated) {
       navigate('/login');
       return;
     }
-    // Open review modal with today's date pre-filled
-    setShowAddReview(true);
+
+    try {
+      // Check if user already has a review for this movie
+      const existingReview = reviews.find(r => r.user_id === user?.id);
+      if (existingReview) {
+        // Update existing review with today's date if watched_date is not set
+        if (!existingReview.watched_date) {
+          const today = new Date().toISOString().split('T')[0];
+          await api.put(`/reviews/${existingReview.id}`, {
+            watched_date: today
+          });
+          alert('Movie marked as watched!');
+          fetchReviews();
+        } else {
+          alert('This movie is already marked as watched.');
+        }
+        return;
+      }
+
+      // Create a minimal review with today's date and default rating of 5
+      const today = new Date().toISOString().split('T')[0];
+      await api.post('/reviews', {
+        movie_id: id,
+        rating: 5, // Default neutral rating
+        watched_date: today
+      });
+      
+      alert('Movie marked as watched!');
+      fetchReviews();
+      fetchMovieDetails(); // Refresh to update average rating
+    } catch (error) {
+      console.error('Error marking as watched:', error);
+      if (error.response?.status === 400 && error.response?.data?.message?.includes('already reviewed')) {
+        // User already has a review, try to update it
+        const userReview = reviews.find(r => r.user_id === user?.id);
+        if (userReview && !userReview.watched_date) {
+          const today = new Date().toISOString().split('T')[0];
+          try {
+            await api.put(`/reviews/${userReview.id}`, {
+              watched_date: today
+            });
+            alert('Movie marked as watched!');
+            fetchReviews();
+          } catch (updateError) {
+            alert('Failed to mark as watched. Please try again.');
+          }
+        } else {
+          alert('You have already reviewed this movie.');
+        }
+      } else {
+        alert(error.response?.data?.message || 'Failed to mark as watched');
+      }
+    }
   };
 
   const handleReviewSuccess = () => {
