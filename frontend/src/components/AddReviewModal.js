@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import api from '../services/api';
 import './AddReviewModal.css';
 
-const AddReviewModal = ({ movie, onClose, onSuccess }) => {
+const AddReviewModal = ({ movie, onClose, onSuccess, initialWatchedDate }) => {
   const [formData, setFormData] = useState({
     rating: '',
     review_text: '',
-    watched_date: '',
+    watched_date: initialWatchedDate || '',
     tags: ''
   });
   const [error, setError] = useState('');

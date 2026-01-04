@@ -11,10 +11,13 @@ const MovieDetail = () => {
   const { authenticated } = useAuth();
   const [movie, setMovie] = useState(null);
   const [reviews, setReviews] = useState([]);
+  const [relatedMovies, setRelatedMovies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddReview, setShowAddReview] = useState(false);
   const [expandedCast, setExpandedCast] = useState(false);
   const [expandedReviews, setExpandedReviews] = useState({});
+  const [reviewPage, setReviewPage] = useState(1);
+  const reviewsPerPage = 5;
 
   const fetchMovieDetails = useCallback(async () => {
     try {
@@ -42,6 +45,36 @@ const MovieDetail = () => {
     fetchReviews();
   }, [fetchMovieDetails, fetchReviews]);
 
+  const fetchRelatedMovies = useCallback(async () => {
+    if (!movie) return;
+    
+    try {
+      let queryParams = new URLSearchParams();
+      queryParams.append('limit', '6');
+      queryParams.append('include_genres', 'true');
+      
+      // Get movies with same genres
+      if (movie.genres && movie.genres.length > 0) {
+        movie.genres.forEach(genre => {
+          queryParams.append('genre_ids', genre.id);
+        });
+      }
+      
+      // Exclude current movie
+      const response = await api.get(`/movies?${queryParams.toString()}`);
+      const related = (response.data.movies || []).filter(m => m.id !== parseInt(id)).slice(0, 6);
+      setRelatedMovies(related);
+    } catch (error) {
+      console.error('Error fetching related movies:', error);
+    }
+  }, [movie, id]);
+
+  useEffect(() => {
+    if (movie) {
+      fetchRelatedMovies();
+    }
+  }, [movie, fetchRelatedMovies]);
+
   const handleAddToWatchlist = async () => {
     if (!authenticated) {
       navigate('/login');
@@ -55,6 +88,15 @@ const MovieDetail = () => {
       console.error('Error adding to watchlist:', error);
       alert(error.response?.data?.message || 'Failed to add to watchlist');
     }
+  };
+
+  const handleMarkAsWatched = () => {
+    if (!authenticated) {
+      navigate('/login');
+      return;
+    }
+    // Open review modal with today's date pre-filled
+    setShowAddReview(true);
   };
 
   const handleReviewSuccess = () => {
@@ -144,6 +186,9 @@ const MovieDetail = () => {
                 <button className="btn btn-primary" onClick={() => setShowAddReview(true)}>
                   Write Review
                 </button>
+                <button className="btn btn-secondary" onClick={handleMarkAsWatched}>
+                  Mark as Watched
+                </button>
                 <button className="btn btn-secondary" onClick={handleAddToWatchlist}>
                   Add to Watchlist
                 </button>
@@ -200,11 +245,31 @@ const MovieDetail = () => {
         </section>
       )}
 
+      {relatedMovies.length > 0 && (
+        <section className="related-movies-section">
+          <h2>Related Movies</h2>
+          <div className="related-movies-grid">
+            {relatedMovies.map((relatedMovie) => (
+              <Link key={relatedMovie.id} to={`/movies/${relatedMovie.id}`} className="related-movie-card">
+                {relatedMovie.poster_url && (
+                  <img src={relatedMovie.poster_url} alt={relatedMovie.title} className="related-movie-poster" />
+                )}
+                <div className="related-movie-info">
+                  <h4>{relatedMovie.title}</h4>
+                  {relatedMovie.year && <p className="related-movie-year">{relatedMovie.year}</p>}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="reviews-section">
         <h2>Reviews ({reviews.length})</h2>
         {reviews.length > 0 ? (
-          <div className="reviews-list">
-            {reviews.map((review) => (
+          <>
+            <div className="reviews-list">
+              {reviews.slice((reviewPage - 1) * reviewsPerPage, reviewPage * reviewsPerPage).map((review) => (
               <div key={review.id} className="review-item">
                 <div className="review-header">
                   <div className="review-rating">
@@ -253,8 +318,30 @@ const MovieDetail = () => {
                   </div>
                 )}
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+            {reviews.length > reviewsPerPage && (
+              <div className="reviews-pagination">
+                <button 
+                  className="btn btn-secondary"
+                  onClick={() => setReviewPage(prev => Math.max(1, prev - 1))}
+                  disabled={reviewPage === 1}
+                >
+                  Previous
+                </button>
+                <span className="pagination-info">
+                  Page {reviewPage} of {Math.ceil(reviews.length / reviewsPerPage)}
+                </span>
+                <button 
+                  className="btn btn-secondary"
+                  onClick={() => setReviewPage(prev => Math.min(Math.ceil(reviews.length / reviewsPerPage), prev + 1))}
+                  disabled={reviewPage >= Math.ceil(reviews.length / reviewsPerPage)}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
         ) : (
           <div className="empty-state">
             <p>No reviews yet. Be the first to review this movie!</p>
@@ -272,6 +359,7 @@ const MovieDetail = () => {
           movie={{ id: parseInt(id), title: movie.title }}
           onClose={() => setShowAddReview(false)}
           onSuccess={handleReviewSuccess}
+          initialWatchedDate={new Date().toISOString().split('T')[0]}
         />
       )}
     </div>
