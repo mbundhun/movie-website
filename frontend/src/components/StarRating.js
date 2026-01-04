@@ -22,7 +22,6 @@ const StarRating = ({ value, onChange, label }) => {
     
     const isFullStar = displayValue >= fullStarValue;
     const isHalfStar = displayValue >= halfStarValue && displayValue < fullStarValue;
-    const isEmptyStar = displayValue < halfStarValue;
 
     return (
       <div key={starIndex} className="star-container">
