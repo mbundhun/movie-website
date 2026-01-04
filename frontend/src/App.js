@@ -20,9 +20,10 @@ function App() {
   return (
     <AuthProvider>
       <Router>
-        <div className="App">
-          <Header />
-          <main className="main-content">
+                <div className="App">
+                  <Header />
+                  <AdminDebug />
+                  <main className="main-content">
             <Suspense fallback={<MovieListSkeleton count={6} />}>
               <Routes>
                 <Route path="/" element={<Home />} />

@@ -188,7 +188,7 @@ const MovieDetail = () => {
           <div className="quick-actions">
             {authenticated && (
               <>
-                {user?.is_admin && (
+                {user?.is_admin === true && (
                   <button 
                     className="btn btn-secondary" 
                     onClick={() => navigate(`/movies/${id}/edit`)}

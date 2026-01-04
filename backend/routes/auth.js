@@ -120,9 +120,14 @@ router.post('/login', async (req, res) => {
 // Get current user info (optional - works for both authenticated and visitors)
 router.get('/me', optionalAuth, async (req, res) => {
   if (req.user) {
+    // Ensure is_admin is a boolean
+    const user = {
+      ...req.user,
+      is_admin: req.user.is_admin === true || req.user.is_admin === 't' || req.user.is_admin === 1
+    };
     res.json({
       authenticated: true,
-      user: req.user
+      user: user
     });
   } else {
     res.json({
